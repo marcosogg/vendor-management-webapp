@@ -1,10 +1,22 @@
-# core/urls.py
 from django.urls import path
-from . import views
+from .views import (
+    home,
+    VendorListView,
+    VendorDetailView,
+    VendorCreateView,
+    VendorUpdateView,
+    PartCreateView,
+    SpendCreateView,
+    RiskCreateView,
+)
 
 urlpatterns = [
-    path('', views.home, name='home'),
-    path('dashboard/', views.dashboard, name='dashboard'),
-    path('vendors/', views.vendor_list, name='vendor_list'),
-    path('vendors/<int:vendor_id>/', views.vendor_profile, name='vendor_profile'),
+    path("", home, name="home"),
+    path("vendors/", VendorListView.as_view(), name="vendor-list"),
+    path("vendors/<int:pk>/", VendorDetailView.as_view(), name="vendor-detail"),
+    path("vendors/add/", VendorCreateView.as_view(), name="vendor-create"),
+    path("vendors/<int:pk>/edit/", VendorUpdateView.as_view(), name="vendor-update"),
+    path("parts/add/", PartCreateView.as_view(), name="part-create"),
+    path("spends/add/", SpendCreateView.as_view(), name="spend-create"),
+    path("risks/add/", RiskCreateView.as_view(), name="risk-create"),
 ]

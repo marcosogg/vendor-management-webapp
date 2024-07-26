@@ -1,10 +1,12 @@
 {% extends 'base.html' %}
-{% load bootstrap4 %}
 
 {% block content %}
-<div class="container mt-5">
-    <h1>Welcome to Vendor Management WebApp</h1>
-    <p>This is a simple home page for our Vendor Management System.</p>
-    <a href="{% url 'dashboard' %}" class="btn btn-primary">Go to Dashboard</a>
+<div class="jumbotron">
+    <h1 class="display-4">Welcome to Vendor Management WebApp</h1>
+    <p class="lead">Manage your vendors, parts, spends, and risks efficiently.</p>
+    <hr class="my-4">
+    <p>Get started by viewing your vendors or importing new data.</p>
+    <a class="btn btn-primary btn-lg" href="{% url 'vendor-list' %}" role="button">View Vendors</a>
+    <a class="btn btn-success btn-lg" href="{% url 'import-data' %}" role="button">Import Data</a>
 </div>
 {% endblock %}

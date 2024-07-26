@@ -1,7 +1,6 @@
-# data_import/urls.py
 from django.urls import path
-from . import views
+from .views import import_data
 
 urlpatterns = [
-    path('', views.import_data, name='import_data'),
+    path('', import_data, name='import-data'),
 ]

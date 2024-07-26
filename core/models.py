@@ -1,40 +1,57 @@
-# core/models.py
 from django.db import models
+from django.core.validators import MinValueValidator, MaxValueValidator
 
 class Vendor(models.Model):
     vendor_name = models.CharField(max_length=200)
     vendor_id = models.CharField(max_length=50, unique=True)
     payment_terms = models.CharField(max_length=100)
-    credit_limit = models.DecimalField(max_digits=10, decimal_places=2)
-    contract_year = models.IntegerField()
-    relationship_type = models.CharField(max_length=50)
+    credit_limit = models.DecimalField(max_digits=10, decimal_places=2, validators=[MinValueValidator(0)])
+    contract_year = models.IntegerField(validators=[MinValueValidator(1900), MaxValueValidator(2100)])
+    relationship_type = models.CharField(max_length=50, choices=[
+        ('STRATEGIC', 'Strategic'),
+        ('PREFERRED', 'Preferred'),
+        ('APPROVED', 'Approved'),
+        ('TERMINATED', 'Terminated')
+    ])
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
-        return self.vendor_name
+        return f"{self.vendor_name} ({self.vendor_id})"
 
 class Part(models.Model):
     part_number = models.CharField(max_length=50, unique=True)
     vendor = models.ForeignKey(Vendor, on_delete=models.CASCADE, related_name='parts')
     buyer = models.CharField(max_length=100)
-    discount = models.DecimalField(max_digits=5, decimal_places=2)
+    discount = models.DecimalField(max_digits=5, decimal_places=2, validators=[MinValueValidator(0), MaxValueValidator(100)])
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
-        return self.part_number
+        return f"{self.part_number} - {self.vendor.vendor_name}"
 
 class Spend(models.Model):
     vendor = models.ForeignKey(Vendor, on_delete=models.CASCADE, related_name='spends')
-    year = models.IntegerField()
-    usd_amount = models.DecimalField(max_digits=12, decimal_places=2)
+    year = models.IntegerField(validators=[MinValueValidator(1900), MaxValueValidator(2100)])
+    usd_amount = models.DecimalField(max_digits=12, decimal_places=2, validators=[MinValueValidator(0)])
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         unique_together = ['vendor', 'year']
 
     def __str__(self):
-        return f"{self.vendor.vendor_name} - {self.year}"
+        return f"{self.vendor.vendor_name} - {self.year}: ${self.usd_amount}"
 
 class Risk(models.Model):
     vendor = models.OneToOneField(Vendor, on_delete=models.CASCADE, related_name='risk')
-    risk_level = models.CharField(max_length=50)
+    risk_level = models.CharField(max_length=50, choices=[
+        ('LOW', 'Low'),
+        ('MEDIUM', 'Medium'),
+        ('HIGH', 'High')
+    ])
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
-        return f"{self.vendor.vendor_name} - {self.risk_level}"
+        return f"{self.vendor.vendor_name} - Risk: {self.get_risk_level_display()}"
