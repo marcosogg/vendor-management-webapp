@@ -1,57 +1,59 @@
-from django.shortcuts import render, get_object_or_404, redirect
-from django.views.generic import ListView, DetailView, CreateView, UpdateView
-from django.urls import reverse_lazy
-from .models import Vendor, Part, Spend, Risk
-from .forms import VendorForm, PartForm, SpendForm, RiskForm
+# core/views.py
 
-def home(request):
-    return render(request, 'core/home.html')
+from django.views.generic import ListView, DetailView
+from django.views.generic.base import TemplateView
+from django.db.models import Q, Sum
+from .models import Vendor, Part, Spend, Risk
+
+
+class HomeView(TemplateView):
+    template_name = "core/home.html"
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["vendor_count"] = Vendor.objects.count()
+        context["part_count"] = Part.objects.count()
+        context["spend_total"] = (
+            Spend.objects.aggregate(total=Sum("usd_amount"))["total"] or 0
+        )
+        context["high_risk_count"] = Risk.objects.filter(risk_level="High").count()
+        return context
+
 
 class VendorListView(ListView):
     model = Vendor
-    template_name = 'core/vendor_list.html'
-    context_object_name = 'vendors'
+    template_name = "vendor_list.html"
+    context_object_name = "vendors"
     paginate_by = 10
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        search_query = self.request.GET.get("search", "")
+        if search_query:
+            queryset = queryset.filter(
+                Q(vendor_name__icontains=search_query)
+                | Q(vendor_id__icontains=search_query)
+            )
+        return queryset
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["search_query"] = self.request.GET.get("search", "")
+        return context
+
 
 class VendorDetailView(DetailView):
     model = Vendor
-    template_name = 'core/vendor_profile.html'
-    context_object_name = 'vendor'
+    template_name = "vendor_detail.html"
+    context_object_name = "vendor"
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         vendor = self.get_object()
-        context['parts'] = vendor.parts.all()
-        context['spends'] = vendor.spends.all()
-        context['risk'] = vendor.risk
+        context["parts"] = vendor.parts.all()
+        context["spends"] = vendor.spends.all()
+        context["risk"] = vendor.risk
         return context
 
-class VendorCreateView(CreateView):
-    model = Vendor
-    form_class = VendorForm
-    template_name = 'core/vendor_form.html'
-    success_url = reverse_lazy('vendor-list')
 
-class VendorUpdateView(UpdateView):
-    model = Vendor
-    form_class = VendorForm
-    template_name = 'core/vendor_form.html'
-    success_url = reverse_lazy('vendor-list')
-
-class PartCreateView(CreateView):
-    model = Part
-    form_class = PartForm
-    template_name = 'core/part_form.html'
-    success_url = reverse_lazy('vendor-list')
-
-class SpendCreateView(CreateView):
-    model = Spend
-    form_class = SpendForm
-    template_name = 'core/spend_form.html'
-    success_url = reverse_lazy('vendor-list')
-
-class RiskCreateView(CreateView):
-    model = Risk
-    form_class = RiskForm
-    template_name = 'core/risk_form.html'
-    success_url = reverse_lazy('vendor-list')
+# Remove any other views that were used for data modification

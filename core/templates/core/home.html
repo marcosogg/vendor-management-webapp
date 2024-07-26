@@ -1,12 +1,11 @@
 {% extends 'base.html' %}
 
 {% block content %}
-<div class="jumbotron">
-    <h1 class="display-4">Welcome to Vendor Management WebApp</h1>
-    <p class="lead">Manage your vendors, parts, spends, and risks efficiently.</p>
-    <hr class="my-4">
-    <p>Get started by viewing your vendors or importing new data.</p>
-    <a class="btn btn-primary btn-lg" href="{% url 'vendor-list' %}" role="button">View Vendors</a>
-    <a class="btn btn-success btn-lg" href="{% url 'import-data' %}" role="button">Import Data</a>
+<h1>Vendor Management Dashboard</h1>
+<div>
+    <p>Total Vendors: {{ vendor_count }}</p>
+    <p>Total Parts: {{ part_count }}</p>
+    <p>Total Spend: ${{ spend_total|floatformat:2 }}</p>
+    <p>High Risk Vendors: {{ high_risk_count }}</p>
 </div>
 {% endblock %}
