@@ -1,0 +1,44 @@
+<!-- core/templates/core/supplier_list.html -->
+
+{% extends 'base.html' %}
+
+{% block content %}
+<h1>Vendor List</h1>
+
+<table class="table table-striped">
+    <thead>
+        <tr>
+            <th>Name</th>
+            <th>Action</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for Vendor in vendors %}
+        <tr>
+            <td>{{ Vendor.name }}</td>
+            <td>
+                <a href="{% url 'supplier_profile' Vendor.id %}" class="btn btn-primary btn-sm">View Profile</a>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+<nav aria-label="Vendor list pagination">
+    <ul class="pagination">
+        {% if vendors.has_previous %}
+        <li class="page-item"><a class="page-link" href="?page={{ vendors.previous_page_number }}">Previous</a></li>
+        {% endif %}
+
+        {% for i in vendors.paginator.page_range %}
+        <li class="page-item {% if vendors.number == i %}active{% endif %}">
+            <a class="page-link" href="?page={{ i }}">{{ i }}</a>
+        </li>
+        {% endfor %}
+
+        {% if vendors.has_next %}
+        <li class="page-item"><a class="page-link" href="?page={{ vendors.next_page_number }}">Next</a></li>
+        {% endif %}
+    </ul>
+</nav>
+{% endblock %}

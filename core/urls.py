@@ -1,6 +1,10 @@
+# core/urls.py
 from django.urls import path
 from . import views
 
 urlpatterns = [
     path('', views.home, name='home'),
+    path('dashboard/', views.dashboard, name='dashboard'),
+    path('vendors/', views.vendor_list, name='vendor_list'),
+    path('vendors/<int:vendor_id>/', views.vendor_profile, name='vendor_profile'),
 ]

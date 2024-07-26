@@ -1,0 +1,80 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<h1>{{ supplier.name }} Profile</h1>
+
+<div class="row">
+    <div class="col-md-6">
+        <h2>Supplier Information</h2>
+        <p><strong>ID:</strong> {{ supplier.supplier_id }}</p>
+        <p><strong>Credit Limit:</strong> ${{ supplier.credit_limit }}</p>
+        <p><strong>Contract Year:</strong> {{ supplier.contract_year }}</p>
+        <p><strong>Relationship Type:</strong> {{ supplier.get_relationship_type_display }}</p>
+    </div>
+    <div class="col-md-6">
+        <h2>Spend Over Time</h2>
+        <canvas id="spendChart"></canvas>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-md-6">
+        <h2>Parts Supplied</h2>
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Part Number</th>
+                    <th>Description</th>
+                    <th>Unit Price</th>
+                    <th>Type</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for part in parts %}
+                <tr>
+                    <td>{{ part.part_number }}</td>
+                    <td>{{ part.description }}</td>
+                    <td>${{ part.unit_price }}</td>
+                    <td>{{ part.get_part_type_display }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    <div class="col-md-6">
+        <h2>Risk Assessment</h2>
+        {% if risk %}
+        <p><strong>Risk Level:</strong> {{ risk.get_risk_level_display }}</p>
+        <p><strong>Assessment Date:</strong> {{ risk.assessment_date }}</p>
+        <p><strong>Notes:</strong> {{ risk.notes }}</p>
+        {% else %}
+        <p>No risk assessment available.</p>
+        {% endif %}
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    var ctx = document.getElementById('spendChart').getContext('2d');
+    var chart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: [{% for spend in spend_data %}'{{ spend.year }}',{% endfor %}],
+    datasets: [{
+        label: 'Yearly Spend',
+        data: [{% for spend in spend_data %}{{ spend.amount }}, {% endfor %}],
+        borderColor: 'rgb(75, 192, 192)',
+            tension: 0.1
+            }]
+        },
+    options: {
+        scales: {
+            y: {
+                beginAtZero: true
+            }
+        }
+    }
+    });
+</script>
+{% endblock %}

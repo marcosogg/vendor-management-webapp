@@ -1,11 +1,10 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Vendor Management WebApp</title>
-</head>
-<body>
+{% extends 'base.html' %}
+{% load bootstrap4 %}
+
+{% block content %}
+<div class="container mt-5">
     <h1>Welcome to Vendor Management WebApp</h1>
-</body>
-</html>
+    <p>This is a simple home page for our Vendor Management System.</p>
+    <a href="{% url 'dashboard' %}" class="btn btn-primary">Go to Dashboard</a>
+</div>
+{% endblock %}
