@@ -2,7 +2,7 @@
 
 from django.views.generic import ListView, DetailView
 from django.views.generic.base import TemplateView
-from django.db.models import Q, Sum
+from django.db.models import Q, Sum, Count
 from .models import Vendor, Part, Spend, Risk
 
 
@@ -17,6 +17,17 @@ class HomeView(TemplateView):
             Spend.objects.aggregate(total=Sum("usd_amount"))["total"] or 0
         )
         context["high_risk_count"] = Risk.objects.filter(risk_level="High").count()
+
+        # Additional statistics
+        context["avg_spend_per_vendor"] = (
+            context["spend_total"] / context["vendor_count"]
+            if context["vendor_count"] > 0
+            else 0
+        )
+        context["top_vendors"] = Vendor.objects.annotate(
+            total_spend=Sum("spends__usd_amount")
+        ).order_by("-total_spend")[:5]
+
         return context
 
 
