@@ -1,35 +1,150 @@
 {% extends 'base.html' %}
+{% load bootstrap4 %}
+
+{% block title %}{{ vendor.vendor_name }} - Vendor Profile{% endblock %}
 
 {% block content %}
-<h1>{{ vendor.vendor_name }}</h1>
-<p><strong>Vendor ID:</strong> {{ vendor.vendor_id }}</p>
-<p><strong>Payment Terms:</strong> {{ vendor.payment_terms }}</p>
-<p><strong>Credit Limit:</strong> ${{ vendor.credit_limit }}</p>
-<p><strong>Contract Year:</strong> {{ vendor.contract_year }}</p>
-<p><strong>Relationship Type:</strong> {{ vendor.get_relationship_type_display }}</p>
+<div class="container">
+    <h1 class="mb-4">{{ vendor.vendor_name }}</h1>
+    <div class="row">
+        <div class="col-md-6">
+            <h2>Vendor Details</h2>
+            <table class="table">
+                <tr><th>Vendor ID:</th><td>{{ vendor.vendor_id }}</td></tr>
+                <tr><th>Payment Terms:</th><td>{{ vendor.payment_terms }}</td></tr>
+                <tr><th>Credit Limit:</th><td>${{ vendor.credit_limit|floatformat:2 }}</td></tr>
+                <tr><th>Contract Year:</th><td>{{ vendor.contract_year }}</td></tr>
+                <tr><th>Relationship Type:</th><td>{{ vendor.get_relationship_type_display }}</td></tr>
+            </table>
+        </div>
+        <div class="col-md-6">
+            <h2>Risk Assessment</h2>
+            {% if risk %}
+                <p class="alert alert-{{ risk.get_risk_level_display|lower }}">
+                    Risk Level: {{ risk.get_risk_level_display }}
+                </p>
+            {% else %}
+                <p class="alert alert-warning">No risk assessment available for this vendor.</p>
+            {% endif %}
+        </div>
+    </div>
 
-<h2>Parts</h2>
-<ul>
-    {% for part in parts %}
-    <li>{{ part.part_number }} - Buyer: {{ part.buyer }}, Discount: {{ part.discount }}%</li>
-    {% empty %}
-    <li>No parts found for this vendor.</li>
-    {% endfor %}
-</ul>
-
-<h2>Spend History</h2>
-<ul>
-    {% for spend in spends %}
-    <li>{{ spend.year }}: ${{ spend.usd_amount }}</li>
-    {% empty %}
-    <li>No spend history found for this vendor.</li>
-    {% endfor %}
-</ul>
-
-<h2>Risk Assessment</h2>
-{% if risk %}
-<p>Risk Level: {{ risk.get_risk_level_display }}</p>
-{% else %}
-<p>No risk assessment available for this vendor.</p>
-{% endif %}
+    <div class="row mt-4">
+        <div class="col-md-6">
+            <h2>Parts</h2>
+            {% if parts %}
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>Part Number</th>
+                            <th>Buyer</th>
+                            <th>Discount</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for part in parts %}
+                        <tr>
+                            <td>{{ part.part_number }}</td>
+                            <td>{{ part.buyer }}</td>
+                            <td>{{ part.discount }}%</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            {% else %}
+                <p>No parts found for this vendor.</p>
+            {% endif %}
+        </div>
+        <div class="col-md-6">
+            <h2>Spend History</h2>
+            {% if spends %}
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>Year</th>
+                            <th>Amount</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for spend in spends %}
+                        <tr>
+                            <td>{{ spend.year }}</td>
+                            <td>${{ spend.usd_amount|floatformat:2 }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            {% else %}
+                <p>No spend history found for this vendor.</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
 {% endblock %}
+
+<div class="row mt-4">
+    <div class="col-md-6">
+        <h2>Spend History Chart</h2>
+        <canvas id="spendChart"></canvas>
+    </div>
+    <div class="col-md-6">
+        <h2>Parts Distribution</h2>
+        <canvas id="partsChart"></canvas>
+    </div>
+</div>
+
+<script>
+    // Spend History Chart
+    var spendCtx = document.getElementById('spendChart').getContext('2d');
+    var spendChart = new Chart(spendCtx, {
+        type: 'line',
+        data: {
+            labels: [{% for spend in spends %}'{{ spend.year }}',{% endfor %}],
+            datasets: [{
+                label: 'Spend Amount',
+                data: [{% for spend in spends %}{{ spend.usd_amount }},{% endfor %}],
+                borderColor: 'rgb(75, 192, 192)',
+                tension: 0.1
+            }]
+        },
+        options: {
+            responsive: true,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    title: {
+                        display: true,
+                        text: 'USD Amount'
+                    }
+                }
+            }
+        }
+    });
+
+    // Parts Distribution Chart
+    var partsCtx = document.getElementById('partsChart').getContext('2d');
+    var partsChart = new Chart(partsCtx, {
+        type: 'pie',
+        data: {
+            labels: [{% for part in parts %}'{{ part.part_number }}',{% endfor %}],
+            datasets: [{
+                data: [{% for part in parts %}1,{% endfor %}],
+                backgroundColor: [
+                    'rgba(255, 99, 132, 0.8)',
+                    'rgba(54, 162, 235, 0.8)',
+                    'rgba(255, 206, 86, 0.8)',
+                    'rgba(75, 192, 192, 0.8)',
+                    'rgba(153, 102, 255, 0.8)',
+                ]
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: {
+                    position: 'right',
+                }
+            }
+        }
+    });
+</script>

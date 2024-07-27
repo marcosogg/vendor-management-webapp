@@ -5,7 +5,7 @@ from django.db import transaction
 from core.models import Vendor, Part, Spend, Risk
 from django.utils import timezone
 import random
-
+from decimal import Decimal
 
 class Command(BaseCommand):
     help = "Populates the database with sample data for testing"
@@ -14,42 +14,102 @@ class Command(BaseCommand):
     def handle(self, *args, **kwargs):
         self.stdout.write("Populating database...")
 
-        # Create vendors
-        vendors = []
-        for i in range(20):
-            vendor = Vendor.objects.create(
-                vendor_name=f"Vendor {i+1}",
-                vendor_id=f"V{i+1:03d}",
-                payment_terms=random.choice(["Net 30", "Net 60", "Net 90"]),
-                credit_limit=random.randint(10000, 1000000),
-                contract_year=random.randint(2020, 2024),
-                relationship_type=random.choice(
-                    ["Strategic", "Preferred", "Approved", "New"]
-                ),
-            )
-            vendors.append(vendor)
+        # Sample data
+        sample_data = [
+            ("EC00-1800FLOW-US-USD-25", "1800FL", "1800 FLOWERS", "B04", "N29"),
+            ("EC00-1800FLOW-US-USD-50", "1800FL", "1800 FLOWERS", "B04", "N29"),
+            (
+                "EC00-1800PETS-US-USD-50",
+                "PETSUN",
+                "TABcom, LLC (DBA – petsupplies.com)",
+                "B05",
+                "N30",
+            ),
+            ("EC00-85CAFE-CN-CNY-20", "DATATR02", "DATATRADE LTD", "DAT", "FLOT"),
+            (
+                "EC00-A101-TR-TRY-1000",
+                "SANMAG",
+                "Bigbrands E-Ticket Hizmetleri ve ihract",
+                "B08",
+                "N5",
+            ),
+            (
+                "EC00-A101-TR-TRY-250",
+                "SANMAG",
+                "Bigbrands E-Ticket Hizmetleri ve ihract",
+                "B08",
+                "N5",
+            ),
+            (
+                "EC00-ABBVIE-US-USD-25",
+                "BOUNDL",
+                "Overture Promotions, Inc.",
+                "B04",
+                "N29",
+            ),
+            (
+                "EC00-ACCENROW-US-USD-25",
+                "BRANDA02",
+                "Brand Addition (Accenture)",
+                "B08",
+                "N30",
+            ),
+            (
+                "EC00-ACCENTUR-CA-CAD-25",
+                "STAPACCA",
+                "Staples Promotional Canada (Accenture Store Card)",
+                "B08",
+                "N30",
+            ),
+            (
+                "EC00-ACCENTUR-US-USD-25",
+                "STAPACUS",
+                "Staples Promotional (Accenture Store Card - USD)",
+                "B08",
+                "N30",
+            ),
+        ]
 
-        # Create parts
-        for i in range(100):
-            Part.objects.create(
-                part_number=f"P{i+1:04d}",
-                vendor=random.choice(vendors),
-                buyer=f"Buyer {random.randint(1, 5)}",
-                discount=random.uniform(0, 0.3),
+        for part_number, vendor_id, vendor_name, buyer_id, terms in sample_data:
+            # Create or update vendor
+            vendor, _ = Vendor.objects.update_or_create(
+                vendor_id=vendor_id,
+                defaults={
+                    "vendor_name": vendor_name,
+                    "payment_terms": terms,
+                    "credit_limit": Decimal(round(random.uniform(100000, 2000000), 2)),
+                    "contract_year": timezone.now().year,
+                    "relationship_type": random.choice(["DIRECT", "THIRD PARTY"]),
+                },
             )
 
-        # Create spend data
-        current_year = timezone.now().year
-        for vendor in vendors:
-            for year in range(current_year - 3, current_year + 1):
-                Spend.objects.create(
-                    vendor=vendor, year=year, usd_amount=random.randint(10000, 1000000)
+            # Create or update part
+            Part.objects.update_or_create(
+                part_number=part_number,
+                defaults={
+                    "vendor": vendor,
+                    "buyer": buyer_id,
+                    "discount": Decimal(round(random.uniform(0, 100), 2)),
+                },
+            )
+
+            # Create or update spend data for the last 3 years
+            current_year = timezone.now().year
+            for year in range(current_year - 2, current_year + 1):
+                Spend.objects.update_or_create(
+                    vendor=vendor,
+                    year=year,
+                    defaults={
+                        "usd_amount": Decimal(round(random.uniform(10000, 1000000), 2)),
+                    },
                 )
 
-        # Create risk assessments
-        for vendor in vendors:
-            Risk.objects.create(
-                vendor=vendor, risk_level=random.choice(["Low", "Medium", "High"])
+            # Create or update risk data
+            Risk.objects.update_or_create(
+                vendor=vendor,
+                defaults={
+                    "risk_level": random.choice(["LOW", "MEDIUM", "HIGH"]),
+                },
             )
 
         self.stdout.write(self.style.SUCCESS("Database successfully populated!"))

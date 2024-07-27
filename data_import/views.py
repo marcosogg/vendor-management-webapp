@@ -9,9 +9,12 @@ def import_data(request):
         if form.is_valid():
             uploaded_file = request.FILES['file']
             try:
-                result = handle_uploaded_file(uploaded_file)
-                messages.success(request, f'Successfully imported {result} records.')
-                return redirect('vendor-list')
+                records_imported, errors = handle_uploaded_file(uploaded_file)
+                if errors:
+                    for error in errors:
+                        messages.warning(request, error)
+                messages.success(request, f'Successfully imported {records_imported} records.')
+                return redirect('vendor_list')
             except Exception as e:
                 messages.error(request, f'Error importing file: {str(e)}')
     else:

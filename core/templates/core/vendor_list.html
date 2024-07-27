@@ -3,15 +3,34 @@
 {% block content %}
 <h1>Vendor List</h1>
 
-<form method="get" class="mb-3">
-    <div class="input-group">
-        <input type="text" name="search" class="form-control" placeholder="Search vendors..."
-            value="{{ search_query }}">
-        <div class="input-group-append">
-            <button class="btn btn-outline-secondary" type="submit">Search</button>
+<form method="get" class="mb-3" id="searchForm">
+    <div class="row">
+        <div class="col-md-4">
+            <input type="text" name="search" class="form-control" placeholder="Search vendors..."
+                value="{{ search_query }}" oninput="submitForm()">
+        </div>
+        <div class="col-md-3">
+            <select name="relationship_type" class="form-control" onchange="submitForm()">
+                <option value="">All Relationship Types</option>
+                {% for choice in vendor_relationship_types %}
+                <option value="{{ choice.0 }}" {% if choice.0 == relationship_type %} selected{% endif %}>{{ choice.1 }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-3">
+            <select name="risk_level" class="form-control" onchange="submitForm()">
+                <option value="">All Risk Levels</option>
+                {% for choice in risk_levels %}
+                <option value="{{ choice.0 }}" {% if choice.0 == risk_level %} selected{% endif %}>{{ choice.1 }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-2">
+            <button class="btn btn-secondary" type="button" onclick="resetSearch()">Reset</button>
         </div>
     </div>
 </form>
+
 
 <table class="table table-striped">
     <thead>
@@ -26,15 +45,27 @@
     <tbody>
         {% for vendor in vendors %}
         <tr>
-            <td>{{ vendor.vendor_name }}</td>
+            <td><a href="{% url 'vendor_profile' vendor.pk %}">{{ vendor.vendor_name }}</a></td>
             <td>{{ vendor.vendor_id }}</td>
             <td>{{ vendor.payment_terms }}</td>
             <td>{{ vendor.contract_year }}</td>
-            <td>{{ vendor.relationship_type }}</td>
+            <td>{{ vendor.get_relationship_type_display }}</td>
         </tr>
         {% endfor %}
     </tbody>
 </table>
 
 {% include 'core/pagination.html' %}
-{% endblock %}
+<script>
+    function submitForm() {
+        document.getElementById('searchForm').submit();
+    }
+    
+    function resetSearch() {
+        document.getElementsByName('search')[0].value = '';
+        document.getElementsByName('relationship_type')[0].selectedIndex = 0;
+        document.getElementsByName('risk_level')[0].selectedIndex = 0;
+        submitForm();
+    }
+    </script>
+    {% endblock %}

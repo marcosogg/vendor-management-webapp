@@ -9,10 +9,12 @@ Directory structure of included files:
             └── models.py
             └── tests.py
             └── urls.py
+            └── utils.py
             └── views.py
             └── __init__.py
             └── management/
                 └── commands/
+                    └── clear_db.py
                     └── describe_models.py
                     └── populate_db.py
                     └── __pycache__/
@@ -23,6 +25,7 @@ Directory structure of included files:
                 └── __pycache__/
             └── templates/
                 └── core/
+                    └── dashboard.html
                     └── home.html
                     └── pagination.html
                     └── part_form.html
@@ -53,6 +56,8 @@ Directory structure of included files:
     └── templates
         └── templates/
             └── base.html
+            └── registration/
+                └── login.html
     └── vendor_management
         └── vendor_management/
             └── asgi.py
@@ -157,55 +162,70 @@ File: core\models.py
 from django.db import models
 from django.core.validators import MinValueValidator, MaxValueValidator
 
+
 class Vendor(models.Model):
     vendor_name = models.CharField(max_length=200)
     vendor_id = models.CharField(max_length=50, unique=True)
     payment_terms = models.CharField(max_length=100)
-    credit_limit = models.DecimalField(max_digits=10, decimal_places=2, validators=[MinValueValidator(0)])
-    contract_year = models.IntegerField(validators=[MinValueValidator(1900), MaxValueValidator(2100)])
-    relationship_type = models.CharField(max_length=50, choices=[
-        ('STRATEGIC', 'Strategic'),
-        ('PREFERRED', 'Preferred'),
-        ('APPROVED', 'Approved'),
-        ('TERMINATED', 'Terminated')
-    ])
+    credit_limit = models.DecimalField(
+        max_digits=10, decimal_places=2, validators=[MinValueValidator(0)]
+    )
+    contract_year = models.IntegerField(
+        validators=[MinValueValidator(1900), MaxValueValidator(2100)]
+    )
+    relationship_type = models.CharField(
+        max_length=50,
+        choices=[
+            ("DIRECT", "Direct"),
+            ("THIRD PARTY", "Third Party"),
+        ],
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
         return f"{self.vendor_name} ({self.vendor_id})"
 
+
 class Part(models.Model):
     part_number = models.CharField(max_length=50, unique=True)
-    vendor = models.ForeignKey(Vendor, on_delete=models.CASCADE, related_name='parts')
+    vendor = models.ForeignKey(Vendor, on_delete=models.CASCADE, related_name="parts")
     buyer = models.CharField(max_length=100)
-    discount = models.DecimalField(max_digits=5, decimal_places=2, validators=[MinValueValidator(0), MaxValueValidator(100)])
+    discount = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        validators=[MinValueValidator(0), MaxValueValidator(100)],
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
         return f"{self.part_number} - {self.vendor.vendor_name}"
 
+
 class Spend(models.Model):
-    vendor = models.ForeignKey(Vendor, on_delete=models.CASCADE, related_name='spends')
-    year = models.IntegerField(validators=[MinValueValidator(1900), MaxValueValidator(2100)])
-    usd_amount = models.DecimalField(max_digits=12, decimal_places=2, validators=[MinValueValidator(0)])
+    vendor = models.ForeignKey(Vendor, on_delete=models.CASCADE, related_name="spends")
+    year = models.IntegerField(
+        validators=[MinValueValidator(1900), MaxValueValidator(2100)]
+    )
+    usd_amount = models.DecimalField(
+        max_digits=12, decimal_places=2, validators=[MinValueValidator(0)]
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        unique_together = ['vendor', 'year']
+        unique_together = ["vendor", "year"]
 
     def __str__(self):
         return f"{self.vendor.vendor_name} - {self.year}: ${self.usd_amount}"
 
+
 class Risk(models.Model):
-    vendor = models.OneToOneField(Vendor, on_delete=models.CASCADE, related_name='risk')
-    risk_level = models.CharField(max_length=50, choices=[
-        ('LOW', 'Low'),
-        ('MEDIUM', 'Medium'),
-        ('HIGH', 'High')
-    ])
+    vendor = models.OneToOneField(Vendor, on_delete=models.CASCADE, related_name="risk")
+    risk_level = models.CharField(
+        max_length=50, choices=[("LOW", "Low"), ("MEDIUM", "Medium"), ("HIGH", "High")]
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -219,8 +239,60 @@ File: core\tests.py
 ================================================================================
 """
 from django.test import TestCase
+from django.urls import reverse
+from .models import Vendor, Part, Spend, Risk
 
-# Create your tests here.
+class VendorModelTest(TestCase):
+    def setUp(self):
+        self.vendor = Vendor.objects.create(
+            vendor_name="Test Vendor",
+            vendor_id="TV001",
+            payment_terms="Net 30",
+            credit_limit=10000,
+            contract_year=2023,
+            relationship_type="STRATEGIC"
+        )
+
+    def test_vendor_creation(self):
+        self.assertTrue(isinstance(self.vendor, Vendor))
+        self.assertEqual(self.vendor.__str__(), "Test Vendor (TV001)")
+
+class VendorListViewTest(TestCase):
+    def setUp(self):
+        Vendor.objects.create(
+            vendor_name="Vendor 1",
+            vendor_id="V001",
+            payment_terms="Net 30",
+            credit_limit=10000,
+            contract_year=2023,
+            relationship_type="STRATEGIC"
+        )
+        Vendor.objects.create(
+            vendor_name="Vendor 2",
+            vendor_id="V002",
+            payment_terms="Net 60",
+            credit_limit=20000,
+            contract_year=2023,
+            relationship_type="PREFERRED"
+        )
+
+    def test_view_url_exists_at_desired_location(self):
+        response = self.client.get('/vendors/')
+        self.assertEqual(response.status_code, 200)
+
+    def test_view_url_accessible_by_name(self):
+        response = self.client.get(reverse('vendor_list'))
+        self.assertEqual(response.status_code, 200)
+
+    def test_view_uses_correct_template(self):
+        response = self.client.get(reverse('vendor_list'))
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, 'core/vendor_list.html')
+
+    def test_search_functionality(self):
+        response = self.client.get(reverse('vendor_list'), {'search': 'Vendor 1'})
+        self.assertContains(response, 'Vendor 1')
+        self.assertNotContains(response, 'Vendor 2')
 
 """
 
@@ -228,16 +300,35 @@ from django.test import TestCase
 File: core\urls.py
 ================================================================================
 """
-# core/urls.py
-
 from django.urls import path
-from .views import HomeView, VendorListView, VendorDetailView
+from .views import DashboardView, VendorListView, VendorProfileView
 
 urlpatterns = [
-    path("", HomeView.as_view(), name="home"),
-    path("vendors/", VendorListView.as_view(), name="vendor_list"),  # Updated
-    path("vendors/<int:pk>/", VendorDetailView.as_view(), name="vendor_detail"),
+    path("", DashboardView.as_view(), name="dashboard"),
+    path("vendors/", VendorListView.as_view(), name="vendor_list"),
+    path("vendors/<int:pk>/", VendorProfileView.as_view(), name="vendor_profile"),
 ]
+
+"""
+
+================================================================================
+File: core\utils.py
+================================================================================
+"""
+import logging
+
+logger = logging.getLogger(__name__)
+
+
+def log_error(func):
+    def wrapper(*args, **kwargs):
+        try:
+            return func(*args, **kwargs)
+        except Exception as e:
+            logger.error(f"Error in {func.__name__}: {str(e)}")
+            raise
+
+    return wrapper
 
 """
 
@@ -245,76 +336,141 @@ urlpatterns = [
 File: core\views.py
 ================================================================================
 """
-# core/views.py
+from django.views.generic import ListView, DetailView, TemplateView
+from django.views.generic.edit import CreateView, UpdateView
+from django.db.models import Sum, Count, Q
+from django.urls import reverse_lazy
+from django.utils.decorators import method_decorator
+from django.views.decorators.cache import cache_page
+from django.contrib.auth.mixins import LoginRequiredMixin
+from django.contrib.auth.decorators import login_required
+from django.utils.html import escape
+from django.core.exceptions import ValidationError
 
-from django.views.generic import ListView, DetailView
-from django.views.generic.base import TemplateView
-from django.db.models import Q, Sum, Count
 from .models import Vendor, Part, Spend, Risk
+from .forms import VendorForm
+from .utils import log_error
 
+import logging
 
-class HomeView(TemplateView):
-    template_name = "core/home.html"
+logger = logging.getLogger(__name__)
 
+@method_decorator(login_required, name="dispatch")
+class DashboardView(LoginRequiredMixin, TemplateView):
+    template_name = "core/dashboard.html"
+
+    # @method_decorator(cache_page(60 * 15))  # Cache for 15 minutes
+    def get(self, request, *args, **kwargs):
+        return super().get(request, *args, **kwargs)
+
+    @log_error
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context["vendor_count"] = Vendor.objects.count()
-        context["part_count"] = Part.objects.count()
-        context["spend_total"] = (
-            Spend.objects.aggregate(total=Sum("usd_amount"))["total"] or 0
+        context["total_vendors"] = Vendor.objects.count()
+        context["total_parts"] = Part.objects.count()
+        context["total_spend"] = (
+            Spend.objects.aggregate(Sum("usd_amount"))["usd_amount__sum"] or 0
         )
-        context["high_risk_count"] = Risk.objects.filter(risk_level="High").count()
-
-        # Additional statistics
-        context["avg_spend_per_vendor"] = (
-            context["spend_total"] / context["vendor_count"]
-            if context["vendor_count"] > 0
-            else 0
-        )
+        context["high_risk_vendors"] = Vendor.objects.filter(
+            risk__risk_level="HIGH"
+        ).count()
         context["top_vendors"] = Vendor.objects.annotate(
             total_spend=Sum("spends__usd_amount")
         ).order_by("-total_spend")[:5]
-
         return context
 
-
+@method_decorator(login_required, name="dispatch")
 class VendorListView(ListView):
     model = Vendor
-    template_name = "core/vendor_list.html"  # Updated
+    template_name = "core/vendor_list.html"
     context_object_name = "vendors"
     paginate_by = 10
 
     def get_queryset(self):
-        queryset = super().get_queryset()
-        search_query = self.request.GET.get("search", "")
-        if search_query:
-            queryset = queryset.filter(
-                Q(vendor_name__icontains=search_query)
-                | Q(vendor_id__icontains=search_query)
-            )
-        return queryset
+        try:
+            queryset = super().get_queryset().select_related("risk")
+            search_query = escape(self.request.GET.get("search", ""))
+            relationship_type = escape(self.request.GET.get("relationship_type", ""))
+            risk_level = escape(self.request.GET.get("risk_level", ""))
+
+            if search_query:
+                queryset = queryset.filter(
+                    Q(vendor_name__icontains=search_query) |
+                    Q(vendor_id__icontains=search_query)
+                )
+
+            if relationship_type:
+                queryset = queryset.filter(relationship_type=relationship_type)
+
+            if risk_level:
+                queryset = queryset.filter(risk__risk_level=risk_level)
+
+            logger.debug(f"Vendor query: {queryset.query}")
+            return queryset
+        except ValidationError as e:
+            logger.error(f"Validation error in VendorListView: {e}")
+            return Vendor.objects.none()
+        except Exception as e:
+            logger.error(f"Unexpected error in VendorListView: {e}")
+            return Vendor.objects.none()
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context["search_query"] = self.request.GET.get("search", "")
+        context["relationship_type"] = self.request.GET.get("relationship_type", "")
+        context["risk_level"] = self.request.GET.get("risk_level", "")
+        context["vendor_relationship_types"] = Vendor._meta.get_field('relationship_type').choices
+        context["risk_levels"] = Risk._meta.get_field('risk_level').choices
         return context
 
-
-class VendorDetailView(DetailView):
+@method_decorator(login_required, name="dispatch")
+class VendorProfileView(LoginRequiredMixin, DetailView):
     model = Vendor
     template_name = "core/vendor_profile.html"
     context_object_name = "vendor"
 
+    @log_error
+    def get_queryset(self):
+        return (
+            super()
+            .get_queryset()
+            .prefetch_related("parts", "spends")
+            .select_related("risk")
+        )
+
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        vendor = self.get_object()
+        vendor = self.object
         context["parts"] = vendor.parts.all()
-        context["spends"] = vendor.spends.all()
+        context["spends"] = vendor.spends.all().order_by("-year")
         context["risk"] = vendor.risk
         return context
 
+@method_decorator(login_required, name="dispatch")
+class VendorCreateView(LoginRequiredMixin, CreateView):
+    model = Vendor
+    form_class = VendorForm
+    template_name = "core/vendor_form.html"
+    success_url = reverse_lazy("vendor_list")
 
-# Remove any other views that were used for data modification
+    @log_error
+    def form_valid(self, form):
+        response = super().form_valid(form)
+        Risk.objects.create(vendor=self.object, risk_level="LOW")
+        return response
+
+@method_decorator(login_required, name="dispatch")
+class VendorUpdateView(LoginRequiredMixin, UpdateView):
+    model = Vendor
+    form_class = VendorForm
+    template_name = "core/vendor_form.html"
+    success_url = reverse_lazy("vendor_list")
+
+    @log_error
+    def form_valid(self, form):
+        return super().form_valid(form)
+
+# You can add more views here as needed, such as views for Part, Spend, and Risk models
 
 """
 
@@ -322,6 +478,43 @@ class VendorDetailView(DetailView):
 File: core\__init__.py
 ================================================================================
 """
+
+"""
+
+================================================================================
+File: core\management\commands\clear_db.py
+================================================================================
+"""
+from django.core.management.base import BaseCommand
+from django.apps import apps
+from django.db import connection
+
+class Command(BaseCommand):
+    help = 'Clears all data from all tables in the database'
+
+    def handle(self, *args, **kwargs):
+        # Get all models
+        models = apps.get_models()
+
+        with connection.cursor() as cursor:
+            # Disable foreign key checks
+            if connection.vendor == 'sqlite':
+                cursor.execute('PRAGMA foreign_keys = OFF;')
+            
+            for model in models:
+                table_name = model._meta.db_table
+                self.stdout.write(f'Clearing data from {table_name}')
+                cursor.execute(f'DELETE FROM {table_name};')
+                
+                # Reset auto-increment counters for SQLite
+                if connection.vendor == 'sqlite':
+                    cursor.execute(f"DELETE FROM sqlite_sequence WHERE name='{table_name}';")
+
+            # Re-enable foreign key checks
+            if connection.vendor == 'sqlite':
+                cursor.execute('PRAGMA foreign_keys = ON;')
+
+        self.stdout.write(self.style.SUCCESS('Successfully cleared all data from the database'))
 
 """
 
@@ -360,7 +553,7 @@ from django.db import transaction
 from core.models import Vendor, Part, Spend, Risk
 from django.utils import timezone
 import random
-
+from decimal import Decimal
 
 class Command(BaseCommand):
     help = "Populates the database with sample data for testing"
@@ -369,42 +562,102 @@ class Command(BaseCommand):
     def handle(self, *args, **kwargs):
         self.stdout.write("Populating database...")
 
-        # Create vendors
-        vendors = []
-        for i in range(20):
-            vendor = Vendor.objects.create(
-                vendor_name=f"Vendor {i+1}",
-                vendor_id=f"V{i+1:03d}",
-                payment_terms=random.choice(["Net 30", "Net 60", "Net 90"]),
-                credit_limit=random.randint(10000, 1000000),
-                contract_year=random.randint(2020, 2024),
-                relationship_type=random.choice(
-                    ["Strategic", "Preferred", "Approved", "New"]
-                ),
-            )
-            vendors.append(vendor)
+        # Sample data
+        sample_data = [
+            ("EC00-1800FLOW-US-USD-25", "1800FL", "1800 FLOWERS", "B04", "N29"),
+            ("EC00-1800FLOW-US-USD-50", "1800FL", "1800 FLOWERS", "B04", "N29"),
+            (
+                "EC00-1800PETS-US-USD-50",
+                "PETSUN",
+                "TABcom, LLC (DBA – petsupplies.com)",
+                "B05",
+                "N30",
+            ),
+            ("EC00-85CAFE-CN-CNY-20", "DATATR02", "DATATRADE LTD", "DAT", "FLOT"),
+            (
+                "EC00-A101-TR-TRY-1000",
+                "SANMAG",
+                "Bigbrands E-Ticket Hizmetleri ve ihract",
+                "B08",
+                "N5",
+            ),
+            (
+                "EC00-A101-TR-TRY-250",
+                "SANMAG",
+                "Bigbrands E-Ticket Hizmetleri ve ihract",
+                "B08",
+                "N5",
+            ),
+            (
+                "EC00-ABBVIE-US-USD-25",
+                "BOUNDL",
+                "Overture Promotions, Inc.",
+                "B04",
+                "N29",
+            ),
+            (
+                "EC00-ACCENROW-US-USD-25",
+                "BRANDA02",
+                "Brand Addition (Accenture)",
+                "B08",
+                "N30",
+            ),
+            (
+                "EC00-ACCENTUR-CA-CAD-25",
+                "STAPACCA",
+                "Staples Promotional Canada (Accenture Store Card)",
+                "B08",
+                "N30",
+            ),
+            (
+                "EC00-ACCENTUR-US-USD-25",
+                "STAPACUS",
+                "Staples Promotional (Accenture Store Card - USD)",
+                "B08",
+                "N30",
+            ),
+        ]
 
-        # Create parts
-        for i in range(100):
-            Part.objects.create(
-                part_number=f"P{i+1:04d}",
-                vendor=random.choice(vendors),
-                buyer=f"Buyer {random.randint(1, 5)}",
-                discount=random.uniform(0, 0.3),
+        for part_number, vendor_id, vendor_name, buyer_id, terms in sample_data:
+            # Create or update vendor
+            vendor, _ = Vendor.objects.update_or_create(
+                vendor_id=vendor_id,
+                defaults={
+                    "vendor_name": vendor_name,
+                    "payment_terms": terms,
+                    "credit_limit": Decimal(round(random.uniform(100000, 2000000), 2)),
+                    "contract_year": timezone.now().year,
+                    "relationship_type": random.choice(["DIRECT", "THIRD PARTY"]),
+                },
             )
 
-        # Create spend data
-        current_year = timezone.now().year
-        for vendor in vendors:
-            for year in range(current_year - 3, current_year + 1):
-                Spend.objects.create(
-                    vendor=vendor, year=year, usd_amount=random.randint(10000, 1000000)
+            # Create or update part
+            Part.objects.update_or_create(
+                part_number=part_number,
+                defaults={
+                    "vendor": vendor,
+                    "buyer": buyer_id,
+                    "discount": Decimal(round(random.uniform(0, 100), 2)),
+                },
+            )
+
+            # Create or update spend data for the last 3 years
+            current_year = timezone.now().year
+            for year in range(current_year - 2, current_year + 1):
+                Spend.objects.update_or_create(
+                    vendor=vendor,
+                    year=year,
+                    defaults={
+                        "usd_amount": Decimal(round(random.uniform(10000, 1000000), 2)),
+                    },
                 )
 
-        # Create risk assessments
-        for vendor in vendors:
-            Risk.objects.create(
-                vendor=vendor, risk_level=random.choice(["Low", "Medium", "High"])
+            # Create or update risk data
+            Risk.objects.update_or_create(
+                vendor=vendor,
+                defaults={
+                    "risk_level": random.choice(["LOW", "MEDIUM", "HIGH"]),
+                },
             )
 
         self.stdout.write(self.style.SUCCESS("Database successfully populated!"))
@@ -581,6 +834,75 @@ File: core\migrations\__init__.py
 ================================================================================
 """
 
+"""
+
+================================================================================
+File: core\templates\core\dashboard.html
+================================================================================
+"""
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<h1>Vendor Management Dashboard</h1>
+
+<div class="row">
+    <div class="col-md-3">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">Total Vendors</h5>
+                <p class="card-text display-4">{{ total_vendors }}</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">Total Parts</h5>
+                <p class="card-text display-4">{{ total_parts }}</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">Total Spend</h5>
+                <p class="card-text display-4">${{ total_spend|floatformat:2 }}</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">High Risk Vendors</h5>
+                <p class="card-text display-4">{{ high_risk_vendors }}</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-md-6">
+        <h2>Top 5 Vendors by Spend</h2>
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>Vendor</th>
+                    <th>Total Spend</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for vendor in top_vendors %}
+                <tr>
+                    <td>{{ vendor.vendor_name }}</td>
+                    <td>${{ vendor.total_spend|floatformat:2 }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
 """
 
 ================================================================================
@@ -772,15 +1094,34 @@ File: core\templates\core\vendor_list.html
 {% block content %}
 <h1>Vendor List</h1>
 
-<form method="get" class="mb-3">
-    <div class="input-group">
-        <input type="text" name="search" class="form-control" placeholder="Search vendors..."
-            value="{{ search_query }}">
-        <div class="input-group-append">
-            <button class="btn btn-outline-secondary" type="submit">Search</button>
+<form method="get" class="mb-3" id="searchForm">
+    <div class="row">
+        <div class="col-md-4">
+            <input type="text" name="search" class="form-control" placeholder="Search vendors..."
+                value="{{ search_query }}" oninput="submitForm()">
+        </div>
+        <div class="col-md-3">
+            <select name="relationship_type" class="form-control" onchange="submitForm()">
+                <option value="">All Relationship Types</option>
+                {% for choice in vendor_relationship_types %}
+                <option value="{{ choice.0 }}" {% if choice.0 == relationship_type %} selected{% endif %}>{{ choice.1 }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-3">
+            <select name="risk_level" class="form-control" onchange="submitForm()">
+                <option value="">All Risk Levels</option>
+                {% for choice in risk_levels %}
+                <option value="{{ choice.0 }}" {% if choice.0 == risk_level %} selected{% endif %}>{{ choice.1 }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-2">
+            <button class="btn btn-secondary" type="button" onclick="resetSearch()">Reset</button>
         </div>
     </div>
 </form>
+
 
 <table class="table table-striped">
     <thead>
@@ -795,18 +1136,30 @@ File: core\templates\core\vendor_list.html
     <tbody>
         {% for vendor in vendors %}
         <tr>
-            <td>{{ vendor.vendor_name }}</td>
+            <td><a href="{% url 'vendor_profile' vendor.pk %}">{{ vendor.vendor_name }}</a></td>
             <td>{{ vendor.vendor_id }}</td>
             <td>{{ vendor.payment_terms }}</td>
             <td>{{ vendor.contract_year }}</td>
-            <td>{{ vendor.relationship_type }}</td>
+            <td>{{ vendor.get_relationship_type_display }}</td>
         </tr>
         {% endfor %}
     </tbody>
 </table>
 
 {% include 'core/pagination.html' %}
-{% endblock %}
+<script>
+    function submitForm() {
+        document.getElementById('searchForm').submit();
+    }
+    
+    function resetSearch() {
+        document.getElementsByName('search')[0].value = '';
+        document.getElementsByName('relationship_type')[0].selectedIndex = 0;
+        document.getElementsByName('risk_level')[0].selectedIndex = 0;
+        submitForm();
+    }
+    </script>
+    {% endblock %}
 """
 
 ================================================================================
@@ -814,40 +1167,155 @@ File: core\templates\core\vendor_profile.html
 ================================================================================
 """
 {% extends 'base.html' %}
+{% load bootstrap4 %}
+
+{% block title %}{{ vendor.vendor_name }} - Vendor Profile{% endblock %}
 
 {% block content %}
-<h1>{{ vendor.vendor_name }}</h1>
-<p><strong>Vendor ID:</strong> {{ vendor.vendor_id }}</p>
-<p><strong>Payment Terms:</strong> {{ vendor.payment_terms }}</p>
-<p><strong>Credit Limit:</strong> ${{ vendor.credit_limit }}</p>
-<p><strong>Contract Year:</strong> {{ vendor.contract_year }}</p>
-<p><strong>Relationship Type:</strong> {{ vendor.get_relationship_type_display }}</p>
+<div class="container">
+    <h1 class="mb-4">{{ vendor.vendor_name }}</h1>
+    <div class="row">
+        <div class="col-md-6">
+            <h2>Vendor Details</h2>
+            <table class="table">
+                <tr><th>Vendor ID:</th><td>{{ vendor.vendor_id }}</td></tr>
+                <tr><th>Payment Terms:</th><td>{{ vendor.payment_terms }}</td></tr>
+                <tr><th>Credit Limit:</th><td>${{ vendor.credit_limit|floatformat:2 }}</td></tr>
+                <tr><th>Contract Year:</th><td>{{ vendor.contract_year }}</td></tr>
+                <tr><th>Relationship Type:</th><td>{{ vendor.get_relationship_type_display }}</td></tr>
+            </table>
+        </div>
+        <div class="col-md-6">
+            <h2>Risk Assessment</h2>
+            {% if risk %}
+                <p class="alert alert-{{ risk.get_risk_level_display|lower }}">
+                    Risk Level: {{ risk.get_risk_level_display }}
+                </p>
+            {% else %}
+                <p class="alert alert-warning">No risk assessment available for this vendor.</p>
+            {% endif %}
+        </div>
+    </div>
 
-<h2>Parts</h2>
-<ul>
-    {% for part in parts %}
-    <li>{{ part.part_number }} - Buyer: {{ part.buyer }}, Discount: {{ part.discount }}%</li>
-    {% empty %}
-    <li>No parts found for this vendor.</li>
-    {% endfor %}
-</ul>
-
-<h2>Spend History</h2>
-<ul>
-    {% for spend in spends %}
-    <li>{{ spend.year }}: ${{ spend.usd_amount }}</li>
-    {% empty %}
-    <li>No spend history found for this vendor.</li>
-    {% endfor %}
-</ul>
-
-<h2>Risk Assessment</h2>
-{% if risk %}
-<p>Risk Level: {{ risk.get_risk_level_display }}</p>
-{% else %}
-<p>No risk assessment available for this vendor.</p>
-{% endif %}
+    <div class="row mt-4">
+        <div class="col-md-6">
+            <h2>Parts</h2>
+            {% if parts %}
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>Part Number</th>
+                            <th>Buyer</th>
+                            <th>Discount</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for part in parts %}
+                        <tr>
+                            <td>{{ part.part_number }}</td>
+                            <td>{{ part.buyer }}</td>
+                            <td>{{ part.discount }}%</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            {% else %}
+                <p>No parts found for this vendor.</p>
+            {% endif %}
+        </div>
+        <div class="col-md-6">
+            <h2>Spend History</h2>
+            {% if spends %}
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>Year</th>
+                            <th>Amount</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for spend in spends %}
+                        <tr>
+                            <td>{{ spend.year }}</td>
+                            <td>${{ spend.usd_amount|floatformat:2 }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            {% else %}
+                <p>No spend history found for this vendor.</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
 {% endblock %}
+
+<div class="row mt-4">
+    <div class="col-md-6">
+        <h2>Spend History Chart</h2>
+        <canvas id="spendChart"></canvas>
+    </div>
+    <div class="col-md-6">
+        <h2>Parts Distribution</h2>
+        <canvas id="partsChart"></canvas>
+    </div>
+</div>
+
+<script>
+    // Spend History Chart
+    var spendCtx = document.getElementById('spendChart').getContext('2d');
+    var spendChart = new Chart(spendCtx, {
+        type: 'line',
+        data: {
+            labels: [{% for spend in spends %}'{{ spend.year }}',{% endfor %}],
+            datasets: [{
+                label: 'Spend Amount',
+                data: [{% for spend in spends %}{{ spend.usd_amount }},{% endfor %}],
+                borderColor: 'rgb(75, 192, 192)',
+                tension: 0.1
+            }]
+        },
+        options: {
+            responsive: true,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    title: {
+                        display: true,
+                        text: 'USD Amount'
+                    }
+                }
+            }
+        }
+    });
+
+    // Parts Distribution Chart
+    var partsCtx = document.getElementById('partsChart').getContext('2d');
+    var partsChart = new Chart(partsCtx, {
+        type: 'pie',
+        data: {
+            labels: [{% for part in parts %}'{{ part.part_number }}',{% endfor %}],
+            datasets: [{
+                data: [{% for part in parts %}1,{% endfor %}],
+                backgroundColor: [
+                    'rgba(255, 99, 132, 0.8)',
+                    'rgba(54, 162, 235, 0.8)',
+                    'rgba(255, 206, 86, 0.8)',
+                    'rgba(75, 192, 192, 0.8)',
+                    'rgba(153, 102, 255, 0.8)',
+                ]
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: {
+                    position: 'right',
+                }
+            }
+        }
+    });
+</script>
 """
 
 ================================================================================
@@ -897,37 +1365,62 @@ File: data_import\import_handlers.py
 ================================================================================
 """
 import pandas as pd
+from django.db import transaction
 from core.models import Vendor, Part, Spend, Risk
 
+
+@transaction.atomic
 def handle_uploaded_file(file):
-    # Determine file type and read accordingly
-    if file.name.endswith('.csv'):
+    if file.name.endswith(".csv"):
         df = pd.read_csv(file)
-    elif file.name.endswith(('.xlsx', '.xls')):
+    elif file.name.endswith((".xlsx", ".xls")):
         df = pd.read_excel(file)
     else:
         raise ValueError("Unsupported file format")
 
-    # Process the data
     records_imported = 0
+    errors = []
+
     for _, row in df.iterrows():
-        # This is a simplified example. You'll need to adapt this to your specific data structure.
-        vendor, created = Vendor.objects.get_or_create(
-            vendor_id=row['vendor_id'],
-            defaults={
-                'vendor_name': row['vendor_name'],
-                'payment_terms': row['payment_terms'],
-                'credit_limit': row['credit_limit'],
-                'contract_year': row['contract_year'],
-                'relationship_type': row['relationship_type']
-            }
-        )
-        if created:
+        try:
+            vendor, created = Vendor.objects.update_or_create(
+                vendor_id=row["vendor_id"],
+                defaults={
+                    "vendor_name": row["vendor_name"],
+                    "payment_terms": row["payment_terms"],
+                    "credit_limit": row["credit_limit"],
+                    "contract_year": row["contract_year"],
+                    "relationship_type": row["relationship_type"],
+                },
+            )
+
+            if "part_number" in row:
+                Part.objects.update_or_create(
+                    part_number=row["part_number"],
+                    defaults={
+                        "vendor": vendor,
+                        "buyer": row["buyer"],
+                        "discount": row["discount"],
+                    },
+                )
+
+            if "spend_year" in row and "spend_amount" in row:
+                Spend.objects.update_or_create(
+                    vendor=vendor,
+                    year=row["spend_year"],
+                    defaults={"usd_amount": row["spend_amount"]},
+                )
+
+            if "risk_level" in row:
+                Risk.objects.update_or_create(
+                    vendor=vendor, defaults={"risk_level": row["risk_level"]}
+                )
+
             records_imported += 1
+        except Exception as e:
+            errors.append(f"Error in row {_}: {str(e)}")
 
-        # Similar processing for Part, Spend, and Risk models...
-
-    return records_imported
+    return records_imported, errors
 
 """
 
@@ -979,15 +1472,17 @@ def import_data(request):
         if form.is_valid():
             uploaded_file = request.FILES['file']
             try:
-                result = handle_uploaded_file(uploaded_file)
-                messages.success(request, f'Successfully imported {result} records.')
-                return redirect('vendor-list')
+                records_imported, errors = handle_uploaded_file(uploaded_file)
+                if errors:
+                    for error in errors:
+                        messages.warning(request, error)
+                messages.success(request, f'Successfully imported {records_imported} records.')
+                return redirect('vendor_list')
             except Exception as e:
                 messages.error(request, f'Error importing file: {str(e)}')
     else:
         form = FileUploadForm()
     return render(request, 'data_import/import.html', {'form': form})
-
 """
 
 ================================================================================
@@ -1035,22 +1530,22 @@ File: templates\base.html
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}Vendor Management WebApp{% endblock %}</title>
+    <title>{% block title %}Vendor Management System{% endblock %}</title>
     {% bootstrap_css %}
     {% bootstrap_javascript jquery='full' %}
 </head>
 
 <body>
     <nav class="navbar navbar-expand-lg navbar-light bg-light">
-        <a class="navbar-brand" href="{% url 'home' %}">Vendor Management</a>
+        <a class="navbar-brand" href="{% url 'dashboard' %}">Vendor Management</a>
         <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNav"
             aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
             <span class="navbar-toggler-icon"></span>
         </button>
         <div class="collapse navbar-collapse" id="navbarNav">
-            <ul class="navbar-nav">
+            <ul class="navbar-nav mr-auto">
                 <li class="nav-item">
-                    <a class="nav-link" href="{% url 'home' %}">Home</a>
+                    <a class="nav-link" href="{% url 'dashboard' %}">Home</a>
                 </li>
                 <li class="nav-item">
                     <a class="nav-link" href="{% url 'vendor_list' %}">Vendors</a>
@@ -1059,9 +1554,25 @@ File: templates\base.html
                     <a class="nav-link" href="{% url 'import_data' %}">Import Data</a>
                 </li>
             </ul>
+            <ul class="navbar-nav">
+                {% if user.is_authenticated %}
+                <li class="nav-item">
+                    <span class="navbar-text mr-3">Welcome, {{ user.username }}</span>
+                </li>
+                <li class="nav-item">
+                    <form method="post" action="{% url 'logout' %}" class="form-inline">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-link nav-link">Logout</button>
+                    </form>
+                </li>
+                {% else %}
+                <li class="nav-item">
+                    <a class="nav-link" href="{% url 'login' %}">Login</a>
+                </li>
+                {% endif %}
+            </ul>
         </div>
     </nav>
-
     <div class="container mt-4">
         {% bootstrap_messages %}
         {% block content %}{% endblock %}
@@ -1069,6 +1580,29 @@ File: templates\base.html
 </body>
 
 </html>
+"""
+
+================================================================================
+File: templates\registration\login.html
+================================================================================
+"""
+{% extends 'base.html' %}
+{% load bootstrap4 %}
+
+{% block content %}
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <h2 class="mt-5 mb-3">Login</h2>
+            <form method="post">
+                {% csrf_token %}
+                {% bootstrap_form form %}
+                <button type="submit" class="btn btn-primary">Login</button>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
 """
 
 ================================================================================
@@ -1147,7 +1681,7 @@ MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
-    "django.middleware.csrf.CsrfViewMiddleware",
+    # "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
@@ -1158,7 +1692,7 @@ ROOT_URLCONF = "vendor_management.urls"
 TEMPLATES = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",
-        "DIRS": [BASE_DIR / "templates"],
+        "DIRS": [BASE_DIR / "templates"],  # Make sure this line is present
         "APP_DIRS": True,
         "OPTIONS": {
             "context_processors": [
@@ -1233,6 +1767,29 @@ MEDIA_ROOT = BASE_DIR / "media"
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
+LOGIN_URL = "login"
+LOGIN_REDIRECT_URL = "dashboard"
+LOGOUT_REDIRECT_URL = "login"
+
+CSRF_COOKIE_SECURE = True
+SESSION_COOKIE_SECURE = True
+
+CSRF_COOKIE_HTTPONLY = False
+
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "handlers": {
+        "console": {
+            "class": "logging.StreamHandler",
+        },
+    },
+    "root": {
+        "handlers": ["console"],
+        "level": "DEBUG",
+    },
+}
+
 """
 
 ================================================================================
@@ -1255,14 +1812,19 @@ Including another URLconf
     1. Import the include() function: from django.urls import include, path
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
+
 # core/models.py
 from django.contrib import admin
 from django.urls import path, include
+from django.contrib.auth import views as auth_views
+from django.views.generic import RedirectView
 
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('', include('core.urls')),
     path('import/', include('data_import.urls')),
+    path('accounts/login/', auth_views.LoginView.as_view(), name='login'),
+    path('accounts/logout/', auth_views.LogoutView.as_view(next_page='login'), name='logout'),
 ]
 
 """

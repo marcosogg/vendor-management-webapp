@@ -1,0 +1,63 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<h1>Vendor Management Dashboard</h1>
+
+<div class="row">
+    <div class="col-md-3">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">Total Vendors</h5>
+                <p class="card-text display-4">{{ total_vendors }}</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">Total Parts</h5>
+                <p class="card-text display-4">{{ total_parts }}</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">Total Spend</h5>
+                <p class="card-text display-4">${{ total_spend|floatformat:2 }}</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">High Risk Vendors</h5>
+                <p class="card-text display-4">{{ high_risk_vendors }}</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-md-6">
+        <h2>Top 5 Vendors by Spend</h2>
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>Vendor</th>
+                    <th>Total Spend</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for vendor in top_vendors %}
+                <tr>
+                    <td>{{ vendor.vendor_name }}</td>
+                    <td>${{ vendor.total_spend|floatformat:2 }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

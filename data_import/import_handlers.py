@@ -1,32 +1,57 @@
 import pandas as pd
+from django.db import transaction
 from core.models import Vendor, Part, Spend, Risk
 
+
+@transaction.atomic
 def handle_uploaded_file(file):
-    # Determine file type and read accordingly
-    if file.name.endswith('.csv'):
+    if file.name.endswith(".csv"):
         df = pd.read_csv(file)
-    elif file.name.endswith(('.xlsx', '.xls')):
+    elif file.name.endswith((".xlsx", ".xls")):
         df = pd.read_excel(file)
     else:
         raise ValueError("Unsupported file format")
 
-    # Process the data
     records_imported = 0
+    errors = []
+
     for _, row in df.iterrows():
-        # This is a simplified example. You'll need to adapt this to your specific data structure.
-        vendor, created = Vendor.objects.get_or_create(
-            vendor_id=row['vendor_id'],
-            defaults={
-                'vendor_name': row['vendor_name'],
-                'payment_terms': row['payment_terms'],
-                'credit_limit': row['credit_limit'],
-                'contract_year': row['contract_year'],
-                'relationship_type': row['relationship_type']
-            }
-        )
-        if created:
+        try:
+            vendor, created = Vendor.objects.update_or_create(
+                vendor_id=row["vendor_id"],
+                defaults={
+                    "vendor_name": row["vendor_name"],
+                    "payment_terms": row["payment_terms"],
+                    "credit_limit": row["credit_limit"],
+                    "contract_year": row["contract_year"],
+                    "relationship_type": row["relationship_type"],
+                },
+            )
+
+            if "part_number" in row:
+                Part.objects.update_or_create(
+                    part_number=row["part_number"],
+                    defaults={
+                        "vendor": vendor,
+                        "buyer": row["buyer"],
+                        "discount": row["discount"],
+                    },
+                )
+
+            if "spend_year" in row and "spend_amount" in row:
+                Spend.objects.update_or_create(
+                    vendor=vendor,
+                    year=row["spend_year"],
+                    defaults={"usd_amount": row["spend_amount"]},
+                )
+
+            if "risk_level" in row:
+                Risk.objects.update_or_create(
+                    vendor=vendor, defaults={"risk_level": row["risk_level"]}
+                )
+
             records_imported += 1
+        except Exception as e:
+            errors.append(f"Error in row {_}: {str(e)}")
 
-        # Similar processing for Part, Spend, and Risk models...
-
-    return records_imported
+    return records_imported, errors
