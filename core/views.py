@@ -33,7 +33,7 @@ class HomeView(TemplateView):
 
 class VendorListView(ListView):
     model = Vendor
-    template_name = "vendor_list.html"
+    template_name = "core/vendor_list.html"  # Updated
     context_object_name = "vendors"
     paginate_by = 10
 
@@ -55,7 +55,7 @@ class VendorListView(ListView):
 
 class VendorDetailView(DetailView):
     model = Vendor
-    template_name = "vendor_detail.html"
+    template_name = "core/vendor_profile.html"
     context_object_name = "vendor"
 
     def get_context_data(self, **kwargs):
