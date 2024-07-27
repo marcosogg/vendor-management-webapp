@@ -1,63 +1,111 @@
 {% extends 'base.html' %}
 {% load static %}
+{% load humanize %}
+
+{% block extra_css %}
+<style>
+    .stat-card {
+        height: 160px;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+    }
+
+    .stat-card .card-body {
+        padding: 1rem;
+    }
+
+    .stat-card .card-title {
+        font-size: 1rem;
+        margin-bottom: 0.5rem;
+    }
+
+    .stat-card .card-text {
+        font-size: 1.5rem;
+        font-weight: bold;
+        margin-bottom: 0;
+        word-wrap: break-word;
+    }
+
+    .currency-value {
+        font-size: 1.2rem;
+    }
+</style>
+{% endblock %}
 
 {% block content %}
-<h1>Vendor Management Dashboard</h1>
+<h1 class="mb-4">Vendor Management Dashboard</h1>
 
-<div class="row">
-    <div class="col-md-3">
-        <div class="card">
+<div class="row mb-4">
+    <div class="col-md-3 mb-3">
+        <div class="card bg-primary text-white stat-card">
             <div class="card-body">
                 <h5 class="card-title">Total Vendors</h5>
-                <p class="card-text display-4">{{ total_vendors }}</p>
+                <p class="card-text">{{ total_vendors }}</p>
             </div>
         </div>
     </div>
-    <div class="col-md-3">
-        <div class="card">
+    <div class="col-md-3 mb-3">
+        <div class="card bg-success text-white stat-card">
             <div class="card-body">
                 <h5 class="card-title">Total Parts</h5>
-                <p class="card-text display-4">{{ total_parts }}</p>
+                <p class="card-text">{{ total_parts }}</p>
             </div>
         </div>
     </div>
-    <div class="col-md-3">
-        <div class="card">
+    <div class="col-md-3 mb-3">
+        <div class="card bg-info text-white stat-card">
             <div class="card-body">
                 <h5 class="card-title">Total Spend</h5>
-                <p class="card-text display-4">${{ total_spend|floatformat:2 }}</p>
+                <p class="card-text currency-value">${{ total_spend|intcomma }}</p>
             </div>
         </div>
     </div>
-    <div class="col-md-3">
-        <div class="card">
+    <div class="col-md-3 mb-3">
+        <div class="card bg-warning text-dark stat-card">
             <div class="card-body">
                 <h5 class="card-title">High Risk Vendors</h5>
-                <p class="card-text display-4">{{ high_risk_vendors }}</p>
+                <p class="card-text">{{ high_risk_vendors }}</p>
             </div>
         </div>
     </div>
 </div>
 
-<div class="row mt-4">
-    <div class="col-md-6">
-        <h2>Top 5 Vendors by Spend</h2>
-        <table class="table table-striped">
-            <thead>
-                <tr>
-                    <th>Vendor</th>
-                    <th>Total Spend</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for vendor in top_vendors %}
-                <tr>
-                    <td>{{ vendor.vendor_name }}</td>
-                    <td>${{ vendor.total_spend|floatformat:2 }}</td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-body">
+                <h2 class="card-title">Top 5 Vendors by Spend</h2>
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>Vendor</th>
+                            <th>Total Spend</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for vendor in top_vendors %}
+                        <tr>
+                            <td>{{ vendor.vendor_name }}</td>
+                            <td>${{ vendor.total_spend|floatformat:0|intcomma }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-body">
+                <h2 class="card-title">Quick Links</h2>
+                <ul class="list-group">
+                    <li class="list-group-item"><a href="{% url 'vendor_list' %}">View All Vendors</a></li>
+                    <li class="list-group-item"><a href="{% url 'import_data' %}">Import Data</a></li>
+                    <!-- Add more quick links as needed -->
+                </ul>
+            </div>
+        </div>
     </div>
 </div>
 {% endblock %}
