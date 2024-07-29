@@ -8,7 +8,6 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.decorators import login_required
 from django.utils.html import escape
 from django.core.exceptions import ValidationError
-
 from .models import Vendor, Part, Spend, Risk, Activity
 from .forms import VendorForm
 from .utils import log_error
@@ -17,6 +16,8 @@ from django.shortcuts import render
 
 import logging
 import math
+from django.db.models import Q
+from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 
 logger = logging.getLogger(__name__)
 
@@ -57,7 +58,6 @@ class DashboardView(LoginRequiredMixin, TemplateView):
         return context
 
 
-@method_decorator(login_required, name="dispatch")
 class VendorListView(LoginRequiredMixin, ListView):
     model = Vendor
     template_name = "core/vendor_list.html"
@@ -66,6 +66,15 @@ class VendorListView(LoginRequiredMixin, ListView):
 
     def get_queryset(self):
         queryset = super().get_queryset().select_related("risk")
+
+        # Sorting
+        sort_by = self.request.GET.get("sort_by", "vendor_name")
+        sort_order = self.request.GET.get("sort_order", "asc")
+        if sort_order == "desc":
+            sort_by = f"-{sort_by}"
+        queryset = queryset.order_by(sort_by)
+
+        # Filtering
         search_query = self.request.GET.get("search", "")
         relationship_type = self.request.GET.get("relationship_type", "")
         risk_level = self.request.GET.get("risk_level", "")
@@ -89,6 +98,8 @@ class VendorListView(LoginRequiredMixin, ListView):
         context["search_query"] = self.request.GET.get("search", "")
         context["relationship_type"] = self.request.GET.get("relationship_type", "")
         context["risk_level"] = self.request.GET.get("risk_level", "")
+        context["sort_by"] = self.request.GET.get("sort_by", "vendor_name")
+        context["sort_order"] = self.request.GET.get("sort_order", "asc")
         context["vendor_relationship_types"] = Vendor._meta.get_field(
             "relationship_type"
         ).choices

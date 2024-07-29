@@ -7,15 +7,15 @@
 <div id="user-menu"></div>
 
 <script>
-  document.addEventListener('DOMContentLoaded', function() {
-    const userMenu = document.getElementById('user-menu');
-    const menuItems = ['Profile', 'Settings', 'Sign out'];
+    document.addEventListener('DOMContentLoaded', function () {
+        const userMenu = document.getElementById('user-menu');
+        const menuItems = ['Profile', 'Settings', 'Sign out'];
 
-    ReactDOM.render(
-      React.createElement(Dropdown, { label: 'User Menu', items: menuItems }),
-      userMenu
-    );
-  });
+        ReactDOM.render(
+            React.createElement(Dropdown, { label: 'User Menu', items: menuItems }),
+            userMenu
+        );
+    });
 </script>
 
 <h1 class="text-3xl font-bold mb-6 text-navy dashboard-header">Vendor Management Dashboard</h1>
