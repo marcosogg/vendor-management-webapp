@@ -842,64 +842,112 @@ File: core\templates\core\dashboard.html
 """
 {% extends 'base.html' %}
 {% load static %}
+{% load humanize %}
+
+{% block extra_css %}
+<style>
+    .stat-card {
+        height: 160px;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+    }
+
+    .stat-card .card-body {
+        padding: 1rem;
+    }
+
+    .stat-card .card-title {
+        font-size: 1rem;
+        margin-bottom: 0.5rem;
+    }
+
+    .stat-card .card-text {
+        font-size: 1.5rem;
+        font-weight: bold;
+        margin-bottom: 0;
+        word-wrap: break-word;
+    }
+
+    .currency-value {
+        font-size: 1.2rem;
+    }
+</style>
+{% endblock %}
 
 {% block content %}
-<h1>Vendor Management Dashboard</h1>
+<h1 class="mb-4">Vendor Management Dashboard</h1>
 
-<div class="row">
-    <div class="col-md-3">
-        <div class="card">
+<div class="row mb-4">
+    <div class="col-md-3 mb-3">
+        <div class="card bg-primary text-white stat-card">
             <div class="card-body">
                 <h5 class="card-title">Total Vendors</h5>
-                <p class="card-text display-4">{{ total_vendors }}</p>
+                <p class="card-text">{{ total_vendors }}</p>
             </div>
         </div>
     </div>
-    <div class="col-md-3">
-        <div class="card">
+    <div class="col-md-3 mb-3">
+        <div class="card bg-success text-white stat-card">
             <div class="card-body">
                 <h5 class="card-title">Total Parts</h5>
-                <p class="card-text display-4">{{ total_parts }}</p>
+                <p class="card-text">{{ total_parts }}</p>
             </div>
         </div>
     </div>
-    <div class="col-md-3">
-        <div class="card">
+    <div class="col-md-3 mb-3">
+        <div class="card bg-info text-white stat-card">
             <div class="card-body">
                 <h5 class="card-title">Total Spend</h5>
-                <p class="card-text display-4">${{ total_spend|floatformat:2 }}</p>
+                <p class="card-text currency-value">${{ total_spend|intcomma }}</p>
             </div>
         </div>
     </div>
-    <div class="col-md-3">
-        <div class="card">
+    <div class="col-md-3 mb-3">
+        <div class="card bg-warning text-dark stat-card">
             <div class="card-body">
                 <h5 class="card-title">High Risk Vendors</h5>
-                <p class="card-text display-4">{{ high_risk_vendors }}</p>
+                <p class="card-text">{{ high_risk_vendors }}</p>
             </div>
         </div>
     </div>
 </div>
 
-<div class="row mt-4">
-    <div class="col-md-6">
-        <h2>Top 5 Vendors by Spend</h2>
-        <table class="table table-striped">
-            <thead>
-                <tr>
-                    <th>Vendor</th>
-                    <th>Total Spend</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for vendor in top_vendors %}
-                <tr>
-                    <td>{{ vendor.vendor_name }}</td>
-                    <td>${{ vendor.total_spend|floatformat:2 }}</td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-body">
+                <h2 class="card-title">Top 5 Vendors by Spend</h2>
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>Vendor</th>
+                            <th>Total Spend</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for vendor in top_vendors %}
+                        <tr>
+                            <td>{{ vendor.vendor_name }}</td>
+                            <td>${{ vendor.total_spend|floatformat:0|intcomma }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-body">
+                <h2 class="card-title">Quick Links</h2>
+                <ul class="list-group">
+                    <li class="list-group-item"><a href="{% url 'vendor_list' %}">View All Vendors</a></li>
+                    <li class="list-group-item"><a href="{% url 'import_data' %}">Import Data</a></li>
+                    <!-- Add more quick links as needed -->
+                </ul>
+            </div>
+        </div>
     </div>
 </div>
 {% endblock %}
@@ -1090,63 +1138,119 @@ File: core\templates\core\vendor_list.html
 ================================================================================
 """
 {% extends 'base.html' %}
+{% load static %}
+
+{% block extra_css %}
+<style>
+    .card {
+        border: none;
+        box-shadow: 0 0.5rem 1rem rgba(177, 140, 140, 0.15);
+        margin-bottom: 1.5rem;
+        border-radius: 0.75rem;
+    }
+    .card-header {
+        background-color: #f8f9fa;
+        border-bottom: none;
+        padding: 1.5rem;
+        border-radius: 0.75rem 0.75rem 0 0;
+    }
+    .card-body {
+        padding: 1.5rem;
+    }
+    .table th {
+        background-color: #007bff;
+        color: white;
+        border: none;
+    }
+    .table td {
+        border-top: none;
+    }
+    .table-hover tbody tr:hover {
+        background-color: #f1f8ff;
+    }
+    .vendor-name {
+        color: #141516;
+        text-decoration: none;
+    }
+    .vendor-name:hover {
+        text-decoration: underline;
+    }
+    .badge-relationship {
+        font-size: 0.85rem;
+    }
+</style>
+{% endblock %}
 
 {% block content %}
-<h1>Vendor List</h1>
+<h1 class="mb-4">Vendor List</h1>
 
-<form method="get" class="mb-3" id="searchForm">
-    <div class="row">
-        <div class="col-md-4">
-            <input type="text" name="search" class="form-control" placeholder="Search vendors..."
-                value="{{ search_query }}" oninput="submitForm()">
-        </div>
-        <div class="col-md-3">
-            <select name="relationship_type" class="form-control" onchange="submitForm()">
-                <option value="">All Relationship Types</option>
-                {% for choice in vendor_relationship_types %}
-                <option value="{{ choice.0 }}" {% if choice.0 == relationship_type %} selected{% endif %}>{{ choice.1 }}</option>
-                {% endfor %}
-            </select>
-        </div>
-        <div class="col-md-3">
-            <select name="risk_level" class="form-control" onchange="submitForm()">
-                <option value="">All Risk Levels</option>
-                {% for choice in risk_levels %}
-                <option value="{{ choice.0 }}" {% if choice.0 == risk_level %} selected{% endif %}>{{ choice.1 }}</option>
-                {% endfor %}
-            </select>
-        </div>
-        <div class="col-md-2">
-            <button class="btn btn-secondary" type="button" onclick="resetSearch()">Reset</button>
+<div class="card mb-4">
+    <div class="card-header">
+        <h5 class="card-title mb-0">Search and Filter</h5>
+    </div>
+    <div class="card-body">
+        <form method="get" id="searchForm" class="row g-3">
+            <div class="col-md-4">
+                <input type="text" name="search" class="form-control" placeholder="Search vendors..." value="{{ search_query }}" oninput="submitForm()">
+            </div>
+            <div class="col-md-3">
+                <select name="relationship_type" class="form-select" onchange="submitForm()">
+                    <option value="">All Relationship Types</option>
+                    {% for choice in vendor_relationship_types %}
+                    <option value="{{ choice.0 }}" {% if choice.0 == relationship_type %} selected{% endif %}>{{ choice.1 }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3">
+                <select name="risk_level" class="form-select" onchange="submitForm()">
+                    <option value="">All Risk Levels</option>
+                    {% for choice in risk_levels %}
+                    <option value="{{ choice.0 }}" {% if choice.0 == risk_level %} selected{% endif %}>{{ choice.1 }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2">
+                <button class="btn btn-secondary w-100" type="button" onclick="resetSearch()">Reset</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Vendor Name</th>
+                        <th>Vendor ID</th>
+                        <th>Payment Terms</th>
+                        <th>Contract Year</th>
+                        <th>Relationship Type</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for vendor in vendors %}
+                    <tr>
+                        <td><a href="{% url 'vendor_profile' vendor.pk %}" class="vendor-name">{{ vendor.vendor_name }}</a></td>
+                        <td>{{ vendor.vendor_id }}</td>
+                        <td>{{ vendor.payment_terms }}</td>
+                        <td>{{ vendor.contract_year }}</td>
+                        <td>
+                            <span class="badge bg-{% if vendor.relationship_type == 'DIRECT' %}primary{% else %}secondary{% endif %} badge-relationship">
+                                {{ vendor.get_relationship_type_display }}
+                            </span>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
         </div>
     </div>
-</form>
-
-
-<table class="table table-striped">
-    <thead>
-        <tr>
-            <th>Vendor Name</th>
-            <th>Vendor ID</th>
-            <th>Payment Terms</th>
-            <th>Contract Year</th>
-            <th>Relationship Type</th>
-        </tr>
-    </thead>
-    <tbody>
-        {% for vendor in vendors %}
-        <tr>
-            <td><a href="{% url 'vendor_profile' vendor.pk %}">{{ vendor.vendor_name }}</a></td>
-            <td>{{ vendor.vendor_id }}</td>
-            <td>{{ vendor.payment_terms }}</td>
-            <td>{{ vendor.contract_year }}</td>
-            <td>{{ vendor.get_relationship_type_display }}</td>
-        </tr>
-        {% endfor %}
-    </tbody>
-</table>
+</div>
 
 {% include 'core/pagination.html' %}
+
 <script>
     function submitForm() {
         document.getElementById('searchForm').submit();
@@ -1158,8 +1262,9 @@ File: core\templates\core\vendor_list.html
         document.getElementsByName('risk_level')[0].selectedIndex = 0;
         submitForm();
     }
-    </script>
-    {% endblock %}
+</script>
+{% endblock %}
+
 """
 
 ================================================================================
@@ -1671,6 +1776,7 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+    "django.contrib.humanize",
     # My apps
     "core",
     "data_import",
