@@ -1,10 +1,15 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}Vendor Management System{% endblock %}</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/react@17/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@17/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@headlessui/react@1.7.15/dist/index.umd.js"></script>
     <script>
         tailwind.config = {
             theme: {
@@ -30,22 +35,52 @@
         @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap');
         @import url('https://fonts.googleapis.com/css2?family=Avenir+LT+Pro:wght@400;700&display=swap');
 
-        .fade-in { animation: fadeIn 0.5s ease-in-out; }
-        .slide-in { animation: slideIn 0.5s ease-in-out; }
-        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-        @keyframes slideIn { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
-        .transition-all { transition: all 0.3s ease-in-out; }
+        .fade-in {
+            animation: fadeIn 0.5s ease-in-out;
+        }
+
+        .slide-in {
+            animation: slideIn 0.5s ease-in-out;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+
+            to {
+                opacity: 1;
+            }
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateY(20px);
+                opacity: 0;
+            }
+
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        .transition-all {
+            transition: all 0.3s ease-in-out;
+        }
     </style>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/chart.js@3.7.1/dist/chart.min.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js@3.7.1/dist/chart.min.js"></script>
     <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.10.24/css/jquery.dataTables.css">
     <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
-    <script type="text/javascript" charset="utf8" src="https://cdn.datatables.net/1.10.24/js/jquery.dataTables.js"></script>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/shepherd.js@8.3.1/dist/css/shepherd.css"/>
+    <script type="text/javascript" charset="utf8"
+        src="https://cdn.datatables.net/1.10.24/js/jquery.dataTables.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/shepherd.js@8.3.1/dist/css/shepherd.css" />
     <script src="https://cdn.jsdelivr.net/npm/shepherd.js@8.3.1/dist/js/shepherd.min.js"></script>
     <script src="https://unpkg.com/@popperjs/core@2"></script>
     <script src="https://unpkg.com/tippy.js@6"></script>
 </head>
+
 <body class="bg-gray-100 font-sans">
     <nav class="bg-white shadow-lg" aria-label="Main Navigation">
         <div class="max-w-7xl mx-auto px-4">
@@ -55,26 +90,35 @@
                         <span class="font-headline font-bold text-navy text-lg">Vendor Management</span>
                     </a>
                     <div class="hidden md:flex items-center space-x-4 ml-10">
-                        <a href="{% url 'dashboard' %}" class="text-navy hover:text-raspberry transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-light-blue" aria-current="page">Home</a>
-                        <a href="{% url 'vendor_list' %}" class="text-navy hover:text-raspberry transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-light-blue">Vendors</a>
-                        <a href="{% url 'import_data' %}" class="text-navy hover:text-raspberry transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-light-blue">Import Data</a>
+                        <a href="{% url 'dashboard' %}"
+                            class="text-navy hover:text-raspberry transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-light-blue"
+                            aria-current="page">Home</a>
+                        <a href="{% url 'vendor_list' %}"
+                            class="text-navy hover:text-raspberry transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-light-blue">Vendors</a>
+                        <a href="{% url 'import_data' %}"
+                            class="text-navy hover:text-raspberry transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-light-blue">Import
+                            Data</a>
                     </div>
                 </div>
                 <div class="flex items-center space-x-4">
                     <form action="{% url 'global_search' %}" method="get" class="hidden md:flex items-center">
-                        <input type="text" name="q" placeholder="Search..." class="border-2 border-gray-300 bg-white h-10 px-5 pr-16 rounded-lg text-sm focus:outline-none">
-                        <button type="submit" class="ml-2 bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                        <input type="text" name="q" placeholder="Search..."
+                            class="border-2 border-gray-300 bg-white h-10 px-5 pr-16 rounded-lg text-sm focus:outline-none">
+                        <button type="submit"
+                            class="ml-2 bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
                             Search
                         </button>
                     </form>
                     {% if user.is_authenticated %}
-                        <span class="text-navy">Welcome, {{ user.username }}</span>
-                        <form method="post" action="{% url 'logout' %}">
-                            {% csrf_token %}
-                            <button type="submit" class="bg-orange-50 text-navy hover:bg-orange transition-all font-medium rounded-lg text-sm px-5 py-2.5 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange">Logout</button>
-                        </form>
+                    <span class="text-navy">Welcome, {{ user.username }}</span>
+                    <form method="post" action="{% url 'logout' %}">
+                        {% csrf_token %}
+                        <button type="submit"
+                            class="bg-orange-50 text-navy hover:bg-orange transition-all font-medium rounded-lg text-sm px-5 py-2.5 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange">Logout</button>
+                    </form>
                     {% else %}
-                        <a href="{% url 'login' %}" class="bg-orange-50 text-navy hover:bg-orange transition-all font-medium rounded-lg text-sm px-5 py-2.5 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange">Login</a>
+                    <a href="{% url 'login' %}"
+                        class="bg-orange-50 text-navy hover:bg-orange transition-all font-medium rounded-lg text-sm px-5 py-2.5 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange">Login</a>
                     {% endif %}
                 </div>
             </div>
@@ -92,12 +136,14 @@
     </footer>
 
     <script>
-        document.addEventListener('DOMContentLoaded', function() {
+        document.addEventListener('DOMContentLoaded', function () {
             // Initialize tooltips
             tippy('[data-tippy-content]');
 
             // You can add more global JavaScript here
         });
     </script>
+    <script src="{% static 'js/components.js' %}"></script>
 </body>
+
 </html>
