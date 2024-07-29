@@ -39,9 +39,10 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     "django.contrib.humanize",
     # My apps
+    "tailwind",
+    "theme",
     "core",
     "data_import",
-    "bootstrap4",
 ]
 
 MIDDLEWARE = [
@@ -156,3 +157,5 @@ LOGGING = {
         "level": "DEBUG",
     },
 }
+
+TAILWIND_APP_NAME = "theme"

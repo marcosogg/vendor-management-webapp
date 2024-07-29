@@ -1,113 +1,60 @@
 {% extends 'base.html' %}
 {% load static %}
 
-{% block extra_css %}
-<style>
-    .card {
-        border: none;
-        box-shadow: 0 0.5rem 1rem rgba(177, 140, 140, 0.15);
-        margin-bottom: 1.5rem;
-        border-radius: 0.75rem;
-    }
-    .card-header {
-        background-color: #f8f9fa;
-        border-bottom: none;
-        padding: 1.5rem;
-        border-radius: 0.75rem 0.75rem 0 0;
-    }
-    .card-body {
-        padding: 1.5rem;
-    }
-    .table th {
-        background-color: #007bff;
-        color: white;
-        border: none;
-    }
-    .table td {
-        border-top: none;
-    }
-    .table-hover tbody tr:hover {
-        background-color: #f1f8ff;
-    }
-    .vendor-name {
-        color: #141516;
-        text-decoration: none;
-    }
-    .vendor-name:hover {
-        text-decoration: underline;
-    }
-    .badge-relationship {
-        font-size: 0.85rem;
-    }
-</style>
-{% endblock %}
-
 {% block content %}
-<h1 class="mb-4">Vendor List</h1>
+<h1 class="text-3xl font-bold mb-6">Vendor List</h1>
 
-<div class="card mb-4">
-    <div class="card-header">
-        <h5 class="card-title mb-0">Search and Filter</h5>
-    </div>
-    <div class="card-body">
-        <form method="get" id="searchForm" class="row g-3">
-            <div class="col-md-4">
-                <input type="text" name="search" class="form-control" placeholder="Search vendors..." value="{{ search_query }}" oninput="submitForm()">
-            </div>
-            <div class="col-md-3">
-                <select name="relationship_type" class="form-select" onchange="submitForm()">
-                    <option value="">All Relationship Types</option>
-                    {% for choice in vendor_relationship_types %}
-                    <option value="{{ choice.0 }}" {% if choice.0 == relationship_type %} selected{% endif %}>{{ choice.1 }}</option>
-                    {% endfor %}
-                </select>
-            </div>
-            <div class="col-md-3">
-                <select name="risk_level" class="form-select" onchange="submitForm()">
-                    <option value="">All Risk Levels</option>
-                    {% for choice in risk_levels %}
-                    <option value="{{ choice.0 }}" {% if choice.0 == risk_level %} selected{% endif %}>{{ choice.1 }}</option>
-                    {% endfor %}
-                </select>
-            </div>
-            <div class="col-md-2">
-                <button class="btn btn-secondary w-100" type="button" onclick="resetSearch()">Reset</button>
-            </div>
-        </form>
-    </div>
+<div class="bg-white shadow-md rounded-lg p-6 mb-6">
+    <h5 class="text-xl font-semibold mb-4">Search and Filter</h5>
+    <form method="get" id="searchForm" class="space-y-4">
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <input type="text" name="search" class="w-full px-3 py-2 border rounded-md" placeholder="Search vendors..." value="{{ search_query }}">
+            <select name="relationship_type" class="w-full px-3 py-2 border rounded-md">
+                <option value="">All Relationship Types</option>
+                {% for choice in vendor_relationship_types %}
+                <option value="{{ choice.0 }}" {% if choice.0 == relationship_type %} selected{% endif %}>{{ choice.1 }}</option>
+                {% endfor %}
+            </select>
+            <select name="risk_level" class="w-full px-3 py-2 border rounded-md">
+                <option value="">All Risk Levels</option>
+                {% for choice in risk_levels %}
+                <option value="{{ choice.0 }}" {% if choice.0 == risk_level %} selected{% endif %}>{{ choice.1 }}</option>
+                {% endfor %}
+            </select>
+            <button type="button" onclick="resetSearch()" class="w-full px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300">Reset</button>
+        </div>
+    </form>
 </div>
 
-<div class="card">
-    <div class="card-body">
-        <div class="table-responsive">
-            <table class="table table-hover">
-                <thead>
-                    <tr>
-                        <th>Vendor Name</th>
-                        <th>Vendor ID</th>
-                        <th>Payment Terms</th>
-                        <th>Contract Year</th>
-                        <th>Relationship Type</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for vendor in vendors %}
-                    <tr>
-                        <td><a href="{% url 'vendor_profile' vendor.pk %}" class="vendor-name">{{ vendor.vendor_name }}</a></td>
-                        <td>{{ vendor.vendor_id }}</td>
-                        <td>{{ vendor.payment_terms }}</td>
-                        <td>{{ vendor.contract_year }}</td>
-                        <td>
-                            <span class="badge bg-{% if vendor.relationship_type == 'DIRECT' %}primary{% else %}secondary{% endif %} badge-relationship">
-                                {{ vendor.get_relationship_type_display }}
-                            </span>
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-    </div>
+<div class="bg-white shadow-md rounded-lg overflow-hidden">
+    <table class="w-full">
+        <thead class="bg-gray-50">
+            <tr>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Vendor Name</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Vendor ID</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Payment Terms</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Contract Year</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Relationship Type</th>
+            </tr>
+        </thead>
+        <tbody class="bg-white divide-y divide-gray-200">
+            {% for vendor in vendors %}
+            <tr>
+                <td class="px-6 py-4 whitespace-nowrap">
+                    <a href="{% url 'vendor_profile' vendor.pk %}" class="text-blue-600 hover:underline">{{ vendor.vendor_name }}</a>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap">{{ vendor.vendor_id }}</td>
+                <td class="px-6 py-4 whitespace-nowrap">{{ vendor.payment_terms }}</td>
+                <td class="px-6 py-4 whitespace-nowrap">{{ vendor.contract_year }}</td>
+                <td class="px-6 py-4 whitespace-nowrap">
+                    <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full {% if vendor.relationship_type == 'DIRECT' %}bg-green-100 text-green-800{% else %}bg-gray-100 text-gray-800{% endif %}">
+                        {{ vendor.get_relationship_type_display }}
+                    </span>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
 </div>
 
 {% include 'core/pagination.html' %}

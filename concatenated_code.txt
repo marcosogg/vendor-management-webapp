@@ -887,116 +887,60 @@ File: core\templates\core\dashboard.html
 ================================================================================
 """
 {% extends 'base.html' %}
-{% load static %}
 {% load humanize %}
 
-{% block extra_css %}
-<style>
-    .stat-card {
-        height: 160px;
-        display: flex;
-        flex-direction: column;
-        justify-content: space-between;
-    }
-
-    .stat-card .card-body {
-        padding: 1rem;
-    }
-
-    .stat-card .card-title {
-        font-size: 1rem;
-        margin-bottom: 0.5rem;
-    }
-
-    .stat-card .card-text {
-        font-size: 1.5rem;
-        font-weight: bold;
-        margin-bottom: 0;
-        word-wrap: break-word;
-    }
-
-    .currency-value {
-        font-size: 1.2rem;
-    }
-</style>
-{% endblock %}
-
 {% block content %}
-<h1 class="mb-4">Vendor Management Dashboard</h1>
+<h1 class="text-3xl font-bold mb-6">Vendor Management Dashboard</h1>
 
-<div class="row mb-4">
-    <div class="col-md-3 mb-3">
-        <div class="card bg-primary text-white stat-card">
-            <div class="card-body">
-                <h5 class="card-title">Total Vendors</h5>
-                <p class="card-text">{{ total_vendors }}</p>
-            </div>
-        </div>
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+    <div class="bg-white rounded-lg shadow-md p-6">
+        <h5 class="text-lg font-semibold mb-2">Total Vendors</h5>
+        <p class="text-3xl font-bold">{{ total_vendors }}</p>
     </div>
-    <div class="col-md-3 mb-3">
-        <div class="card bg-success text-white stat-card">
-            <div class="card-body">
-                <h5 class="card-title">Total Parts</h5>
-                <p class="card-text">{{ total_parts }}</p>
-            </div>
-        </div>
+    <div class="bg-white rounded-lg shadow-md p-6">
+        <h5 class="text-lg font-semibold mb-2">Total Parts</h5>
+        <p class="text-3xl font-bold">{{ total_parts }}</p>
     </div>
-    <div class="col-md-3 mb-3">
-        <div class="card bg-info text-white stat-card">
-            <div class="card-body">
-                <h5 class="card-title">Total Spend</h5>
-                <p class="card-text currency-value">${{ total_spend|intcomma }}</p>
-            </div>
-        </div>
+    <div class="bg-white rounded-lg shadow-md p-6">
+        <h5 class="text-lg font-semibold mb-2">Total Spend</h5>
+        <p class="text-3xl font-bold">${{ total_spend|intcomma }}</p>
     </div>
-    <div class="col-md-3 mb-3">
-        <div class="card bg-warning text-dark stat-card">
-            <div class="card-body">
-                <h5 class="card-title">High Risk Vendors</h5>
-                <p class="card-text">{{ high_risk_vendors }}</p>
-            </div>
-        </div>
+    <div class="bg-white rounded-lg shadow-md p-6">
+        <h5 class="text-lg font-semibold mb-2">High Risk Vendors</h5>
+        <p class="text-3xl font-bold">{{ high_risk_vendors }}</p>
     </div>
 </div>
 
-<div class="row">
-    <div class="col-md-8">
-        <div class="card">
-            <div class="card-body">
-                <h2 class="card-title">Top 5 Vendors by Spend</h2>
-                <table class="table table-striped">
-                    <thead>
-                        <tr>
-                            <th>Vendor</th>
-                            <th>Total Spend</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for vendor in top_vendors %}
-                        <tr>
-                            <td>{{ vendor.vendor_name }}</td>
-                            <td>${{ vendor.total_spend|floatformat:0|intcomma }}</td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-        </div>
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+    <div class="bg-white rounded-lg shadow-md p-6">
+        <h2 class="text-xl font-semibold mb-4">Top 5 Vendors by Spend</h2>
+        <table class="w-full">
+            <thead>
+                <tr>
+                    <th class="text-left py-2">Vendor</th>
+                    <th class="text-right py-2">Total Spend</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for vendor in top_vendors %}
+                <tr>
+                    <td class="py-2">{{ vendor.vendor_name }}</td>
+                    <td class="text-right py-2">${{ vendor.total_spend|floatformat:0|intcomma }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
     </div>
-    <div class="col-md-4">
-        <div class="card">
-            <div class="card-body">
-                <h2 class="card-title">Quick Links</h2>
-                <ul class="list-group">
-                    <li class="list-group-item"><a href="{% url 'vendor_list' %}">View All Vendors</a></li>
-                    <li class="list-group-item"><a href="{% url 'import_data' %}">Import Data</a></li>
-                    <!-- Add more quick links as needed -->
-                </ul>
-            </div>
-        </div>
+    <div class="bg-white rounded-lg shadow-md p-6">
+        <h2 class="text-xl font-semibold mb-4">Quick Links</h2>
+        <ul class="space-y-2">
+            <li><a href="{% url 'vendor_list' %}" class="text-blue-600 hover:underline">View All Vendors</a></li>
+            <li><a href="{% url 'import_data' %}" class="text-blue-600 hover:underline">Import Data</a></li>
+        </ul>
     </div>
 </div>
 {% endblock %}
+
 """
 
 ================================================================================
@@ -1081,22 +1025,33 @@ File: core\templates\core\pagination.html
 ================================================================================
 """
 {% if is_paginated %}
-<nav aria-label="Page navigation">
-    <ul class="pagination justify-content-center">
+<nav class="bg-white px-4 py-3 flex items-center justify-between border-t border-gray-200 sm:px-6" aria-label="Pagination">
+    <div class="hidden sm:block">
+        <p class="text-sm text-gray-700">
+            Showing page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
+        </p>
+    </div>
+    <div class="flex-1 flex justify-between sm:justify-end">
         {% if page_obj.has_previous %}
-            <li class="page-item"><a class="page-link" href="?page=1{% if search_query %}&search={{ search_query }}{% endif %}">&laquo; First</a></li>
-            <li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}">Previous</a></li>
+            <a href="?page=1{% if search_query %}&search={{ search_query }}{% endif %}" class="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+                First
+            </a>
+            <a href="?page={{ page_obj.previous_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}" class="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+                Previous
+            </a>
         {% endif %}
-
-        <li class="page-item active"><span class="page-link">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span></li>
-
         {% if page_obj.has_next %}
-            <li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}">Next</a></li>
-            <li class="page-item"><a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% if search_query %}&search={{ search_query }}{% endif %}">Last &raquo;</a></li>
+            <a href="?page={{ page_obj.next_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}" class="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+                Next
+            </a>
+            <a href="?page={{ page_obj.paginator.num_pages }}{% if search_query %}&search={{ search_query }}{% endif %}" class="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+                Last
+            </a>
         {% endif %}
-    </ul>
+    </div>
 </nav>
 {% endif %}
+
 """
 
 ================================================================================
@@ -1104,13 +1059,11 @@ File: core\templates\core\part_form.html
 ================================================================================
 """
 {% extends 'base.html' %}
-{% load bootstrap4 %}
 
 {% block content %}
 <h1>{% if form.instance.pk %}Edit{% else %}Add{% endif %} Part</h1>
 <form method="post">
     {% csrf_token %}
-    {% bootstrap_form form %}
     {% buttons %}
         <button type="submit" class="btn btn-primary">Save</button>
         <a href="{% url 'vendor-list' %}" class="btn btn-secondary">Cancel</a>
@@ -1124,13 +1077,11 @@ File: core\templates\core\risk_form.html
 ================================================================================
 """
 {% extends 'base.html' %}
-{% load bootstrap4 %}
 
 {% block content %}
 <h1>{% if form.instance.pk %}Edit{% else %}Add{% endif %} Risk Assessment</h1>
 <form method="post">
     {% csrf_token %}
-    {% bootstrap_form form %}
     {% buttons %}
         <button type="submit" class="btn btn-primary">Save</button>
         <a href="{% url 'vendor-list' %}" class="btn btn-secondary">Cancel</a>
@@ -1144,16 +1095,14 @@ File: core\templates\core\spend_form.html
 ================================================================================
 """
 {% extends 'base.html' %}
-{% load bootstrap4 %}
 
 {% block content %}
 <h1>{% if form.instance.pk %}Edit{% else %}Add{% endif %} Spend</h1>
 <form method="post">
     {% csrf_token %}
-    {% bootstrap_form form %}
     {% buttons %}
-        <button type="submit" class="btn btn-primary">Save</button>
-        <a href="{% url 'vendor-list' %}" class="btn btn-secondary">Cancel</a>
+    <button type="submit" class="btn btn-primary">Save</button>
+    <a href="{% url 'vendor-list' %}" class="btn btn-secondary">Cancel</a>
     {% endbuttons %}
 </form>
 {% endblock %}
@@ -1164,13 +1113,11 @@ File: core\templates\core\vendor_form.html
 ================================================================================
 """
 {% extends 'base.html' %}
-{% load bootstrap4 %}
 
 {% block content %}
 <h1>{% if form.instance.pk %}Edit{% else %}Add{% endif %} Vendor</h1>
 <form method="post">
     {% csrf_token %}
-    {% bootstrap_form form %}
     {% buttons %}
         <button type="submit" class="btn btn-primary">Save</button>
         <a href="{% url 'vendor-list' %}" class="btn btn-secondary">Cancel</a>
@@ -1186,113 +1133,60 @@ File: core\templates\core\vendor_list.html
 {% extends 'base.html' %}
 {% load static %}
 
-{% block extra_css %}
-<style>
-    .card {
-        border: none;
-        box-shadow: 0 0.5rem 1rem rgba(177, 140, 140, 0.15);
-        margin-bottom: 1.5rem;
-        border-radius: 0.75rem;
-    }
-    .card-header {
-        background-color: #f8f9fa;
-        border-bottom: none;
-        padding: 1.5rem;
-        border-radius: 0.75rem 0.75rem 0 0;
-    }
-    .card-body {
-        padding: 1.5rem;
-    }
-    .table th {
-        background-color: #007bff;
-        color: white;
-        border: none;
-    }
-    .table td {
-        border-top: none;
-    }
-    .table-hover tbody tr:hover {
-        background-color: #f1f8ff;
-    }
-    .vendor-name {
-        color: #141516;
-        text-decoration: none;
-    }
-    .vendor-name:hover {
-        text-decoration: underline;
-    }
-    .badge-relationship {
-        font-size: 0.85rem;
-    }
-</style>
-{% endblock %}
-
 {% block content %}
-<h1 class="mb-4">Vendor List</h1>
+<h1 class="text-3xl font-bold mb-6">Vendor List</h1>
 
-<div class="card mb-4">
-    <div class="card-header">
-        <h5 class="card-title mb-0">Search and Filter</h5>
-    </div>
-    <div class="card-body">
-        <form method="get" id="searchForm" class="row g-3">
-            <div class="col-md-4">
-                <input type="text" name="search" class="form-control" placeholder="Search vendors..." value="{{ search_query }}" oninput="submitForm()">
-            </div>
-            <div class="col-md-3">
-                <select name="relationship_type" class="form-select" onchange="submitForm()">
-                    <option value="">All Relationship Types</option>
-                    {% for choice in vendor_relationship_types %}
-                    <option value="{{ choice.0 }}" {% if choice.0 == relationship_type %} selected{% endif %}>{{ choice.1 }}</option>
-                    {% endfor %}
-                </select>
-            </div>
-            <div class="col-md-3">
-                <select name="risk_level" class="form-select" onchange="submitForm()">
-                    <option value="">All Risk Levels</option>
-                    {% for choice in risk_levels %}
-                    <option value="{{ choice.0 }}" {% if choice.0 == risk_level %} selected{% endif %}>{{ choice.1 }}</option>
-                    {% endfor %}
-                </select>
-            </div>
-            <div class="col-md-2">
-                <button class="btn btn-secondary w-100" type="button" onclick="resetSearch()">Reset</button>
-            </div>
-        </form>
-    </div>
+<div class="bg-white shadow-md rounded-lg p-6 mb-6">
+    <h5 class="text-xl font-semibold mb-4">Search and Filter</h5>
+    <form method="get" id="searchForm" class="space-y-4">
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <input type="text" name="search" class="w-full px-3 py-2 border rounded-md" placeholder="Search vendors..." value="{{ search_query }}">
+            <select name="relationship_type" class="w-full px-3 py-2 border rounded-md">
+                <option value="">All Relationship Types</option>
+                {% for choice in vendor_relationship_types %}
+                <option value="{{ choice.0 }}" {% if choice.0 == relationship_type %} selected{% endif %}>{{ choice.1 }}</option>
+                {% endfor %}
+            </select>
+            <select name="risk_level" class="w-full px-3 py-2 border rounded-md">
+                <option value="">All Risk Levels</option>
+                {% for choice in risk_levels %}
+                <option value="{{ choice.0 }}" {% if choice.0 == risk_level %} selected{% endif %}>{{ choice.1 }}</option>
+                {% endfor %}
+            </select>
+            <button type="button" onclick="resetSearch()" class="w-full px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300">Reset</button>
+        </div>
+    </form>
 </div>
 
-<div class="card">
-    <div class="card-body">
-        <div class="table-responsive">
-            <table class="table table-hover">
-                <thead>
-                    <tr>
-                        <th>Vendor Name</th>
-                        <th>Vendor ID</th>
-                        <th>Payment Terms</th>
-                        <th>Contract Year</th>
-                        <th>Relationship Type</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for vendor in vendors %}
-                    <tr>
-                        <td><a href="{% url 'vendor_profile' vendor.pk %}" class="vendor-name">{{ vendor.vendor_name }}</a></td>
-                        <td>{{ vendor.vendor_id }}</td>
-                        <td>{{ vendor.payment_terms }}</td>
-                        <td>{{ vendor.contract_year }}</td>
-                        <td>
-                            <span class="badge bg-{% if vendor.relationship_type == 'DIRECT' %}primary{% else %}secondary{% endif %} badge-relationship">
-                                {{ vendor.get_relationship_type_display }}
-                            </span>
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-    </div>
+<div class="bg-white shadow-md rounded-lg overflow-hidden">
+    <table class="w-full">
+        <thead class="bg-gray-50">
+            <tr>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Vendor Name</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Vendor ID</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Payment Terms</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Contract Year</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Relationship Type</th>
+            </tr>
+        </thead>
+        <tbody class="bg-white divide-y divide-gray-200">
+            {% for vendor in vendors %}
+            <tr>
+                <td class="px-6 py-4 whitespace-nowrap">
+                    <a href="{% url 'vendor_profile' vendor.pk %}" class="text-blue-600 hover:underline">{{ vendor.vendor_name }}</a>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap">{{ vendor.vendor_id }}</td>
+                <td class="px-6 py-4 whitespace-nowrap">{{ vendor.payment_terms }}</td>
+                <td class="px-6 py-4 whitespace-nowrap">{{ vendor.contract_year }}</td>
+                <td class="px-6 py-4 whitespace-nowrap">
+                    <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full {% if vendor.relationship_type == 'DIRECT' %}bg-green-100 text-green-800{% else %}bg-gray-100 text-gray-800{% endif %}">
+                        {{ vendor.get_relationship_type_display }}
+                    </span>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
 </div>
 
 {% include 'core/pagination.html' %}
@@ -1318,144 +1212,156 @@ File: core\templates\core\vendor_profile.html
 ================================================================================
 """
 {% extends 'base.html' %}
-{% load bootstrap4 %}
 
 {% block title %}{{ vendor.vendor_name }} - Vendor Profile{% endblock %}
 
 {% block content %}
-<div class="container">
-    <h1 class="mb-4">{{ vendor.vendor_name }}</h1>
-    <div class="row">
-        <div class="col-md-6">
-            <h2>Vendor Details</h2>
-            <table class="table">
-                <tr>
-                    <th>Vendor ID:</th>
-                    <td>{{ vendor.vendor_id }}</td>
-                </tr>
-                <tr>
-                    <th>Payment Terms:</th>
-                    <td>{{ vendor.payment_terms }}</td>
-                </tr>
-                <tr>
-                    <th>Credit Limit:</th>
-                    <td>${{ vendor.credit_limit|floatformat:2 }}</td>
-                </tr>
-                <tr>
-                    <th>Contract Year:</th>
-                    <td>{{ vendor.contract_year }}</td>
-                </tr>
-                <tr>
-                    <th>Relationship Type:</th>
-                    <td>{{ vendor.get_relationship_type_display }}</td>
-                </tr>
-            </table>
-        </div>
-        <div class="col-md-6">
-            <h2>Risk Assessment</h2>
-            {% if risk %}
-            <p class="alert alert-{{ risk.get_risk_level_display|lower }}">
-                Risk Level: {{ risk.get_risk_level_display }}
-                {% if risk.risk_level == "MEDIUM" %}
-                <br><small>(This is a default risk level and will be updated in the future.)</small>
-                {% endif %}
-            </p>
-            {% else %}
-            <p class="alert alert-warning">No risk assessment available for this vendor.</p>
-            {% endif %}
-        </div>
+<h1 class="text-3xl font-bold mb-6">{{ vendor.vendor_name }}</h1>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+    <div class="bg-white shadow-md rounded-lg p-6">
+        <h2 class="text-xl font-semibold mb-4">Vendor Details</h2>
+        <table class="w-full">
+            <tr>
+                <th class="text-left py-2">Vendor ID:</th>
+                <td>{{ vendor.vendor_id }}</td>
+            </tr>
+            <tr>
+                <th class="text-left py-2">Payment Terms:</th>
+                <td>{{ vendor.payment_terms }}</td>
+            </tr>
+            <tr>
+                <th class="text-left py-2">Credit Limit:</th>
+                <td>${{ vendor.credit_limit|floatformat:2 }}</td>
+            </tr>
+            <tr>
+                <th class="text-left py-2">Contract Year:</th>
+                <td>{{ vendor.contract_year }}</td>
+            </tr>
+            <tr>
+                <th class="text-left py-2">Relationship Type:</th>
+                <td>{{ vendor.get_relationship_type_display }}</td>
+            </tr>
+        </table>
     </div>
-
-    <div class="row mt-4">
-        <div class="col-md-6">
-            <h2>Parts</h2>
-            {% if parts %}
-            <table class="table table-striped">
-                <thead>
-                    <tr>
-                        <th>Part Number</th>
-                        <th>Buyer</th>
-                        <th>Discount</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for part in parts %}
-                    <tr>
-                        <td>{{ part.part_number }}</td>
-                        <td>{{ part.buyer }}</td>
-                        <td>{{ part.discount }}%</td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-            {% else %}
-            <p>No parts found for this vendor.</p>
+    <div class="bg-white shadow-md rounded-lg p-6">
+        <h2 class="text-xl font-semibold mb-4">Risk Assessment</h2>
+        {% if risk %}
+        <p class="p-4 rounded-md {% if risk.risk_level == 'LOW' %}bg-green-100 text-green-800{% elif risk.risk_level == 'MEDIUM' %}bg-yellow-100 text-yellow-800{% else %}bg-red-100 text-red-800{% endif %}">
+            Risk Level: {{ risk.get_risk_level_display }}
+            {% if risk.risk_level == "MEDIUM" %}
+            <br><small>(This is a default risk level and will be updated in the future.)</small>
             {% endif %}
-        </div>
-        <div class="col-md-6">
-            <h2>Spend History</h2>
-            {% if spends %}
-            <table class="table table-striped">
-                <thead>
-                    <tr>
-                        <th>Year</th>
-                        <th>Amount</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for spend in spends %}
-                    <tr>
-                        <td>{{ spend.year }}</td>
-                        <td>${{ spend.usd_amount|floatformat:2 }}</td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-            {% else %}
-            <p>No spend history found for this vendor.</p>
-            {% endif %}
-        </div>
+        </p>
+        {% else %}
+        <p class="p-4 bg-yellow-100 text-yellow-800 rounded-md">No risk assessment available for this vendor.</p>
+        {% endif %}
     </div>
 </div>
-{% endblock %}
 
-<div class="row mt-4">
-    <div class="col-md-6">
-        <h2>Spend History Chart</h2>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+    <div class="bg-white shadow-md rounded-lg p-6">
+        <h2 class="text-xl font-semibold mb-4">Parts</h2>
+        {% if parts %}
+        <div class="overflow-x-auto">
+            <table class="w-full">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Part Number</th>
+                        <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Buyer</th>
+                        <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Discount</th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+                    {% for part in parts %}
+                    <tr>
+                        <td class="px-4 py-2 whitespace-nowrap">{{ part.part_number }}</td>
+                        <td class="px-4 py-2 whitespace-nowrap">{{ part.buyer }}</td>
+                        <td class="px-4 py-2 whitespace-nowrap">{{ part.discount }}%</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <p class="text-gray-500">No parts found for this vendor.</p>
+        {% endif %}
+    </div>
+    <div class="bg-white shadow-md rounded-lg p-6">
+        <h2 class="text-xl font-semibold mb-4">Spend History</h2>
+        {% if spends %}
+        <div class="overflow-x-auto">
+            <table class="w-full">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Year</th>
+                        <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+                    {% for spend in spends %}
+                    <tr>
+                        <td class="px-4 py-2 whitespace-nowrap">{{ spend.year }}</td>
+                        <td class="px-4 py-2 whitespace-nowrap">${{ spend.usd_amount|floatformat:2 }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <p class="text-gray-500">No spend history found for this vendor.</p>
+        {% endif %}
+    </div>
+</div>
+
+<div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+    <div class="bg-white shadow-md rounded-lg p-6">
+        <h2 class="text-xl font-semibold mb-4">Spend History Chart</h2>
         <canvas id="spendChart"></canvas>
     </div>
-    <div class="col-md-6">
-        <h2>Parts Distribution</h2>
+    <div class="bg-white shadow-md rounded-lg p-6">
+        <h2 class="text-xl font-semibold mb-4">Parts Distribution</h2>
         <canvas id="partsChart"></canvas>
     </div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
+    // Prepare data for charts
+    var spendData = {
+        labels: [{% for spend in spends %}{{ spend.year }}{% if not forloop.last %}, {% endif %}{% endfor %}],
+        data: [{% for spend in spends %}{{ spend.usd_amount }}{% if not forloop.last %}, {% endif %}{% endfor %}]
+    };
+
+    var partsData = {
+        labels: [{% for part in parts %}'{{ part.part_number }}',{% endfor %}],
+        data: [{% for part in parts %}1,{% endfor %}]
+    };
+
     // Spend History Chart
     var spendCtx = document.getElementById('spendChart').getContext('2d');
     var spendChart = new Chart(spendCtx, {
         type: 'line',
         data: {
-            labels: [{% for spend in spends %}'{{ spend.year }}',{% endfor %}],
-    datasets: [{
-        label: 'Spend Amount',
-        data: [{% for spend in spends %}{{ spend.usd_amount }}, {% endfor %}],
-        borderColor: 'rgb(75, 192, 192)',
-            tension: 0.1
+            labels: spendData.labels,
+            datasets: [{
+                label: 'Spend Amount',
+                data: spendData.data,
+                borderColor: 'rgb(75, 192, 192)',
+                tension: 0.1
             }]
         },
-    options: {
-        responsive: true,
+        options: {
+            responsive: true,
             scales: {
-            y: {
-                beginAtZero: true,
+                y: {
+                    beginAtZero: true,
                     title: {
-                    display: true,
+                        display: true,
                         text: 'USD Amount'
+                    }
                 }
             }
         }
-    }
     });
 
     // Parts Distribution Chart
@@ -1463,28 +1369,30 @@ File: core\templates\core\vendor_profile.html
     var partsChart = new Chart(partsCtx, {
         type: 'pie',
         data: {
-            labels: [{% for part in parts %}'{{ part.part_number }}',{% endfor %}],
-    datasets: [{
-        data: [{% for part in parts %}1, {% endfor %}],
-        backgroundColor: [
-            'rgba(255, 99, 132, 0.8)',
-            'rgba(54, 162, 235, 0.8)',
-            'rgba(255, 206, 86, 0.8)',
-            'rgba(75, 192, 192, 0.8)',
-            'rgba(153, 102, 255, 0.8)',
-        ]
+            labels: partsData.labels,
+            datasets: [{
+                data: partsData.data,
+                backgroundColor: [
+                    'rgba(255, 99, 132, 0.8)',
+                    'rgba(54, 162, 235, 0.8)',
+                    'rgba(255, 206, 86, 0.8)',
+                    'rgba(75, 192, 192, 0.8)',
+                    'rgba(153, 102, 255, 0.8)',
+                ]
             }]
         },
-    options: {
-        responsive: true,
+        options: {
+            responsive: true,
             plugins: {
-            legend: {
-                position: 'right',
+                legend: {
+                    position: 'right'
                 }
+            }
         }
-    }
     });
 </script>
+{% endblock %}
+
 """
 
 ================================================================================
@@ -1866,18 +1774,42 @@ File: data_import\templates\data_import\import.html
 ================================================================================
 """
 {% extends 'base.html' %}
-{% load bootstrap4 %}
 
 {% block content %}
-<h1>Import Data</h1>
-<form method="post" enctype="multipart/form-data">
-    {% csrf_token %}
-    {% bootstrap_form form %}
-    {% buttons %}
-    <button type="submit" class="btn btn-primary">Upload</button>
-    <a href="{% url 'vendor_list' %}" class="btn btn-secondary">Cancel</a>
-    {% endbuttons %}
-</form>
+<div class="max-w-2xl mx-auto">
+    <h1 class="text-3xl font-bold mb-6">Import Data</h1>
+    <div class="bg-white shadow-md rounded-lg p-6">
+        <form method="post" enctype="multipart/form-data" class="space-y-4">
+            {% csrf_token %}
+            {% for field in form %}
+            <div>
+                <label for="{{ field.id_for_label }}" class="block text-sm font-medium text-gray-700">
+                    {{ field.label }}
+                </label>
+                <div class="mt-1">
+                    {{ field }}
+                </div>
+                {% if field.help_text %}
+                <p class="mt-2 text-sm text-gray-500">{{ field.help_text }}</p>
+                {% endif %}
+                {% for error in field.errors %}
+                <p class="mt-2 text-sm text-red-600">{{ error }}</p>
+                {% endfor %}
+            </div>
+            {% endfor %}
+            <div class="flex justify-end space-x-3">
+                <button type="submit"
+                    class="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                    Upload
+                </button>
+                <a href="{% url 'vendor_list' %}"
+                    class="inline-flex justify-center py-2 px-4 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                    Cancel
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
 {% endblock %}
 """
 
@@ -1885,63 +1817,50 @@ File: data_import\templates\data_import\import.html
 File: templates\base.html
 ================================================================================
 """
-{% load bootstrap4 %}
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}Vendor Management System{% endblock %}</title>
-    {% bootstrap_css %}
-    {% bootstrap_javascript jquery='full' %}
+    <script src="https://cdn.tailwindcss.com"></script>
 </head>
-
-<body>
-    <nav class="navbar navbar-expand-lg navbar-light bg-light">
-        <a class="navbar-brand" href="{% url 'dashboard' %}">Vendor Management</a>
-        <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNav"
-            aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
-            <span class="navbar-toggler-icon"></span>
-        </button>
-        <div class="collapse navbar-collapse" id="navbarNav">
-            <ul class="navbar-nav mr-auto">
-                <li class="nav-item">
-                    <a class="nav-link" href="{% url 'dashboard' %}">Home</a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link" href="{% url 'vendor_list' %}">Vendors</a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link" href="{% url 'import_data' %}">Import Data</a>
-                </li>
-            </ul>
-            <ul class="navbar-nav">
-                {% if user.is_authenticated %}
-                <li class="nav-item">
-                    <span class="navbar-text mr-3">Welcome, {{ user.username }}</span>
-                </li>
-                <li class="nav-item">
-                    <form method="post" action="{% url 'logout' %}" class="form-inline">
-                        {% csrf_token %}
-                        <button type="submit" class="btn btn-link nav-link">Logout</button>
-                    </form>
-                </li>
-                {% else %}
-                <li class="nav-item">
-                    <a class="nav-link" href="{% url 'login' %}">Login</a>
-                </li>
-                {% endif %}
-            </ul>
+<body class="bg-gray-100">
+    <nav class="bg-white shadow-lg">
+        <div class="max-w-7xl mx-auto px-4">
+            <div class="flex justify-between">
+                <div class="flex space-x-7">
+                    <div>
+                        <a href="{% url 'dashboard' %}" class="flex items-center py-4 px-2">
+                            <span class="font-semibold text-gray-500 text-lg">Vendor Management</span>
+                        </a>
+                    </div>
+                    <div class="hidden md:flex items-center space-x-1">
+                        <a href="{% url 'dashboard' %}" class="py-4 px-2 text-gray-500 hover:text-gray-900">Home</a>
+                        <a href="{% url 'vendor_list' %}" class="py-4 px-2 text-gray-500 hover:text-gray-900">Vendors</a>
+                        <a href="{% url 'import_data' %}" class="py-4 px-2 text-gray-500 hover:text-gray-900">Import Data</a>
+                    </div>
+                </div>
+                <div class="hidden md:flex items-center space-x-3">
+                    {% if user.is_authenticated %}
+                        <span class="py-2 px-2 font-medium text-gray-500">Welcome, {{ user.username }}</span>
+                        <form method="post" action="{% url 'logout' %}">
+                            {% csrf_token %}
+                            <button type="submit" class="py-2 px-2 font-medium text-gray-500 rounded hover:bg-gray-100 hover:text-gray-900">Logout</button>
+                        </form>
+                    {% else %}
+                        <a href="{% url 'login' %}" class="py-2 px-2 font-medium text-gray-500 rounded hover:bg-gray-100 hover:text-gray-900">Login</a>
+                    {% endif %}
+                </div>
+            </div>
         </div>
     </nav>
-    <div class="container mt-4">
-        {% bootstrap_messages %}
+    <div class="max-w-7xl mx-auto mt-6 px-4 sm:px-6 lg:px-8">
         {% block content %}{% endblock %}
     </div>
 </body>
-
 </html>
+
 """
 
 ================================================================================
@@ -1949,22 +1868,31 @@ File: templates\registration\login.html
 ================================================================================
 """
 {% extends 'base.html' %}
-{% load bootstrap4 %}
 
 {% block content %}
-<div class="container">
-    <div class="row justify-content-center">
-        <div class="col-md-6">
-            <h2 class="mt-5 mb-3">Login</h2>
-            <form method="post">
-                {% csrf_token %}
-                {% bootstrap_form form %}
-                <button type="submit" class="btn btn-primary">Login</button>
-            </form>
-        </div>
+<div class="flex items-center justify-center min-h-screen bg-gray-100">
+    <div class="px-8 py-6 mt-4 text-left bg-white shadow-lg rounded-lg">
+        <h3 class="text-2xl font-bold text-center">Login to your account</h3>
+        <form method="post" class="mt-4">
+            {% csrf_token %}
+            <div class="mt-4">
+                <label class="block" for="username">Username</label>
+                <input type="text" name="username" id="username" placeholder="Username" required
+                    class="w-full px-4 py-2 mt-2 border rounded-md focus:outline-none focus:ring-1 focus:ring-blue-600">
+            </div>
+            <div class="mt-4">
+                <label class="block" for="password">Password</label>
+                <input type="password" name="password" id="password" placeholder="Password" required
+                    class="w-full px-4 py-2 mt-2 border rounded-md focus:outline-none focus:ring-1 focus:ring-blue-600">
+            </div>
+            <div class="flex items-baseline justify-between">
+                <button type="submit" class="px-6 py-2 mt-4 text-white bg-blue-600 rounded-lg hover:bg-blue-900">Login</button>
+            </div>
+        </form>
     </div>
 </div>
 {% endblock %}
+
 """
 
 ================================================================================
@@ -2035,9 +1963,10 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     "django.contrib.humanize",
     # My apps
+    "tailwind",
+    "theme",
     "core",
     "data_import",
-    "bootstrap4",
 ]
 
 MIDDLEWARE = [
@@ -2152,6 +2081,8 @@ LOGGING = {
         "level": "DEBUG",
     },
 }
+
+TAILWIND_APP_NAME = "theme"
 
 """
 

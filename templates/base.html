@@ -1,57 +1,43 @@
-{% load bootstrap4 %}
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}Vendor Management System{% endblock %}</title>
-    {% bootstrap_css %}
-    {% bootstrap_javascript jquery='full' %}
+    <script src="https://cdn.tailwindcss.com"></script>
 </head>
-
-<body>
-    <nav class="navbar navbar-expand-lg navbar-light bg-light">
-        <a class="navbar-brand" href="{% url 'dashboard' %}">Vendor Management</a>
-        <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNav"
-            aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
-            <span class="navbar-toggler-icon"></span>
-        </button>
-        <div class="collapse navbar-collapse" id="navbarNav">
-            <ul class="navbar-nav mr-auto">
-                <li class="nav-item">
-                    <a class="nav-link" href="{% url 'dashboard' %}">Home</a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link" href="{% url 'vendor_list' %}">Vendors</a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link" href="{% url 'import_data' %}">Import Data</a>
-                </li>
-            </ul>
-            <ul class="navbar-nav">
-                {% if user.is_authenticated %}
-                <li class="nav-item">
-                    <span class="navbar-text mr-3">Welcome, {{ user.username }}</span>
-                </li>
-                <li class="nav-item">
-                    <form method="post" action="{% url 'logout' %}" class="form-inline">
-                        {% csrf_token %}
-                        <button type="submit" class="btn btn-link nav-link">Logout</button>
-                    </form>
-                </li>
-                {% else %}
-                <li class="nav-item">
-                    <a class="nav-link" href="{% url 'login' %}">Login</a>
-                </li>
-                {% endif %}
-            </ul>
+<body class="bg-gray-100">
+    <nav class="bg-white shadow-lg">
+        <div class="max-w-7xl mx-auto px-4">
+            <div class="flex justify-between">
+                <div class="flex space-x-7">
+                    <div>
+                        <a href="{% url 'dashboard' %}" class="flex items-center py-4 px-2">
+                            <span class="font-semibold text-gray-500 text-lg">Vendor Management</span>
+                        </a>
+                    </div>
+                    <div class="hidden md:flex items-center space-x-1">
+                        <a href="{% url 'dashboard' %}" class="py-4 px-2 text-gray-500 hover:text-gray-900">Home</a>
+                        <a href="{% url 'vendor_list' %}" class="py-4 px-2 text-gray-500 hover:text-gray-900">Vendors</a>
+                        <a href="{% url 'import_data' %}" class="py-4 px-2 text-gray-500 hover:text-gray-900">Import Data</a>
+                    </div>
+                </div>
+                <div class="hidden md:flex items-center space-x-3">
+                    {% if user.is_authenticated %}
+                        <span class="py-2 px-2 font-medium text-gray-500">Welcome, {{ user.username }}</span>
+                        <form method="post" action="{% url 'logout' %}">
+                            {% csrf_token %}
+                            <button type="submit" class="py-2 px-2 font-medium text-gray-500 rounded hover:bg-gray-100 hover:text-gray-900">Logout</button>
+                        </form>
+                    {% else %}
+                        <a href="{% url 'login' %}" class="py-2 px-2 font-medium text-gray-500 rounded hover:bg-gray-100 hover:text-gray-900">Login</a>
+                    {% endif %}
+                </div>
+            </div>
         </div>
     </nav>
-    <div class="container mt-4">
-        {% bootstrap_messages %}
+    <div class="max-w-7xl mx-auto mt-6 px-4 sm:px-6 lg:px-8">
         {% block content %}{% endblock %}
     </div>
 </body>
-
 </html>

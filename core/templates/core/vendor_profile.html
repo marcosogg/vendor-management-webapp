@@ -1,142 +1,154 @@
 {% extends 'base.html' %}
-{% load bootstrap4 %}
 
 {% block title %}{{ vendor.vendor_name }} - Vendor Profile{% endblock %}
 
 {% block content %}
-<div class="container">
-    <h1 class="mb-4">{{ vendor.vendor_name }}</h1>
-    <div class="row">
-        <div class="col-md-6">
-            <h2>Vendor Details</h2>
-            <table class="table">
-                <tr>
-                    <th>Vendor ID:</th>
-                    <td>{{ vendor.vendor_id }}</td>
-                </tr>
-                <tr>
-                    <th>Payment Terms:</th>
-                    <td>{{ vendor.payment_terms }}</td>
-                </tr>
-                <tr>
-                    <th>Credit Limit:</th>
-                    <td>${{ vendor.credit_limit|floatformat:2 }}</td>
-                </tr>
-                <tr>
-                    <th>Contract Year:</th>
-                    <td>{{ vendor.contract_year }}</td>
-                </tr>
-                <tr>
-                    <th>Relationship Type:</th>
-                    <td>{{ vendor.get_relationship_type_display }}</td>
-                </tr>
-            </table>
-        </div>
-        <div class="col-md-6">
-            <h2>Risk Assessment</h2>
-            {% if risk %}
-            <p class="alert alert-{{ risk.get_risk_level_display|lower }}">
-                Risk Level: {{ risk.get_risk_level_display }}
-                {% if risk.risk_level == "MEDIUM" %}
-                <br><small>(This is a default risk level and will be updated in the future.)</small>
-                {% endif %}
-            </p>
-            {% else %}
-            <p class="alert alert-warning">No risk assessment available for this vendor.</p>
-            {% endif %}
-        </div>
+<h1 class="text-3xl font-bold mb-6">{{ vendor.vendor_name }}</h1>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+    <div class="bg-white shadow-md rounded-lg p-6">
+        <h2 class="text-xl font-semibold mb-4">Vendor Details</h2>
+        <table class="w-full">
+            <tr>
+                <th class="text-left py-2">Vendor ID:</th>
+                <td>{{ vendor.vendor_id }}</td>
+            </tr>
+            <tr>
+                <th class="text-left py-2">Payment Terms:</th>
+                <td>{{ vendor.payment_terms }}</td>
+            </tr>
+            <tr>
+                <th class="text-left py-2">Credit Limit:</th>
+                <td>${{ vendor.credit_limit|floatformat:2 }}</td>
+            </tr>
+            <tr>
+                <th class="text-left py-2">Contract Year:</th>
+                <td>{{ vendor.contract_year }}</td>
+            </tr>
+            <tr>
+                <th class="text-left py-2">Relationship Type:</th>
+                <td>{{ vendor.get_relationship_type_display }}</td>
+            </tr>
+        </table>
     </div>
-
-    <div class="row mt-4">
-        <div class="col-md-6">
-            <h2>Parts</h2>
-            {% if parts %}
-            <table class="table table-striped">
-                <thead>
-                    <tr>
-                        <th>Part Number</th>
-                        <th>Buyer</th>
-                        <th>Discount</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for part in parts %}
-                    <tr>
-                        <td>{{ part.part_number }}</td>
-                        <td>{{ part.buyer }}</td>
-                        <td>{{ part.discount }}%</td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-            {% else %}
-            <p>No parts found for this vendor.</p>
+    <div class="bg-white shadow-md rounded-lg p-6">
+        <h2 class="text-xl font-semibold mb-4">Risk Assessment</h2>
+        {% if risk %}
+        <p class="p-4 rounded-md {% if risk.risk_level == 'LOW' %}bg-green-100 text-green-800{% elif risk.risk_level == 'MEDIUM' %}bg-yellow-100 text-yellow-800{% else %}bg-red-100 text-red-800{% endif %}">
+            Risk Level: {{ risk.get_risk_level_display }}
+            {% if risk.risk_level == "MEDIUM" %}
+            <br><small>(This is a default risk level and will be updated in the future.)</small>
             {% endif %}
-        </div>
-        <div class="col-md-6">
-            <h2>Spend History</h2>
-            {% if spends %}
-            <table class="table table-striped">
-                <thead>
-                    <tr>
-                        <th>Year</th>
-                        <th>Amount</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for spend in spends %}
-                    <tr>
-                        <td>{{ spend.year }}</td>
-                        <td>${{ spend.usd_amount|floatformat:2 }}</td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-            {% else %}
-            <p>No spend history found for this vendor.</p>
-            {% endif %}
-        </div>
+        </p>
+        {% else %}
+        <p class="p-4 bg-yellow-100 text-yellow-800 rounded-md">No risk assessment available for this vendor.</p>
+        {% endif %}
     </div>
 </div>
-{% endblock %}
 
-<div class="row mt-4">
-    <div class="col-md-6">
-        <h2>Spend History Chart</h2>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+    <div class="bg-white shadow-md rounded-lg p-6">
+        <h2 class="text-xl font-semibold mb-4">Parts</h2>
+        {% if parts %}
+        <div class="overflow-x-auto">
+            <table class="w-full">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Part Number</th>
+                        <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Buyer</th>
+                        <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Discount</th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+                    {% for part in parts %}
+                    <tr>
+                        <td class="px-4 py-2 whitespace-nowrap">{{ part.part_number }}</td>
+                        <td class="px-4 py-2 whitespace-nowrap">{{ part.buyer }}</td>
+                        <td class="px-4 py-2 whitespace-nowrap">{{ part.discount }}%</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <p class="text-gray-500">No parts found for this vendor.</p>
+        {% endif %}
+    </div>
+    <div class="bg-white shadow-md rounded-lg p-6">
+        <h2 class="text-xl font-semibold mb-4">Spend History</h2>
+        {% if spends %}
+        <div class="overflow-x-auto">
+            <table class="w-full">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Year</th>
+                        <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+                    {% for spend in spends %}
+                    <tr>
+                        <td class="px-4 py-2 whitespace-nowrap">{{ spend.year }}</td>
+                        <td class="px-4 py-2 whitespace-nowrap">${{ spend.usd_amount|floatformat:2 }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <p class="text-gray-500">No spend history found for this vendor.</p>
+        {% endif %}
+    </div>
+</div>
+
+<div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+    <div class="bg-white shadow-md rounded-lg p-6">
+        <h2 class="text-xl font-semibold mb-4">Spend History Chart</h2>
         <canvas id="spendChart"></canvas>
     </div>
-    <div class="col-md-6">
-        <h2>Parts Distribution</h2>
+    <div class="bg-white shadow-md rounded-lg p-6">
+        <h2 class="text-xl font-semibold mb-4">Parts Distribution</h2>
         <canvas id="partsChart"></canvas>
     </div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
+    // Prepare data for charts
+    var spendData = {
+        labels: [{% for spend in spends %}{{ spend.year }}{% if not forloop.last %}, {% endif %}{% endfor %}],
+        data: [{% for spend in spends %}{{ spend.usd_amount }}{% if not forloop.last %}, {% endif %}{% endfor %}]
+    };
+
+    var partsData = {
+        labels: [{% for part in parts %}'{{ part.part_number }}',{% endfor %}],
+        data: [{% for part in parts %}1,{% endfor %}]
+    };
+
     // Spend History Chart
     var spendCtx = document.getElementById('spendChart').getContext('2d');
     var spendChart = new Chart(spendCtx, {
         type: 'line',
         data: {
-            labels: [{% for spend in spends %}'{{ spend.year }}',{% endfor %}],
-    datasets: [{
-        label: 'Spend Amount',
-        data: [{% for spend in spends %}{{ spend.usd_amount }}, {% endfor %}],
-        borderColor: 'rgb(75, 192, 192)',
-            tension: 0.1
+            labels: spendData.labels,
+            datasets: [{
+                label: 'Spend Amount',
+                data: spendData.data,
+                borderColor: 'rgb(75, 192, 192)',
+                tension: 0.1
             }]
         },
-    options: {
-        responsive: true,
+        options: {
+            responsive: true,
             scales: {
-            y: {
-                beginAtZero: true,
+                y: {
+                    beginAtZero: true,
                     title: {
-                    display: true,
+                        display: true,
                         text: 'USD Amount'
+                    }
                 }
             }
         }
-    }
     });
 
     // Parts Distribution Chart
@@ -144,25 +156,26 @@
     var partsChart = new Chart(partsCtx, {
         type: 'pie',
         data: {
-            labels: [{% for part in parts %}'{{ part.part_number }}',{% endfor %}],
-    datasets: [{
-        data: [{% for part in parts %}1, {% endfor %}],
-        backgroundColor: [
-            'rgba(255, 99, 132, 0.8)',
-            'rgba(54, 162, 235, 0.8)',
-            'rgba(255, 206, 86, 0.8)',
-            'rgba(75, 192, 192, 0.8)',
-            'rgba(153, 102, 255, 0.8)',
-        ]
+            labels: partsData.labels,
+            datasets: [{
+                data: partsData.data,
+                backgroundColor: [
+                    'rgba(255, 99, 132, 0.8)',
+                    'rgba(54, 162, 235, 0.8)',
+                    'rgba(255, 206, 86, 0.8)',
+                    'rgba(75, 192, 192, 0.8)',
+                    'rgba(153, 102, 255, 0.8)',
+                ]
             }]
         },
-    options: {
-        responsive: true,
+        options: {
+            responsive: true,
             plugins: {
-            legend: {
-                position: 'right',
+                legend: {
+                    position: 'right'
                 }
+            }
         }
-    }
     });
 </script>
+{% endblock %}
