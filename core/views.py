@@ -13,6 +13,7 @@ from .forms import VendorForm
 from .utils import log_error
 from django.db.models import Q
 from django.shortcuts import render
+from django.db.models import Avg
 
 import logging
 import math
@@ -128,9 +129,14 @@ class VendorProfileView(LoginRequiredMixin, DetailView):
         context["parts"] = vendor.parts.all()
         context["spends"] = vendor.spends.all().order_by("-year")
 
-        # Get or create the Risk object for the vendor
+        # Calculate average discount for the vendor
+        avg_discount = vendor.parts.aggregate(Avg("discount"))["discount__avg"]
+        context["avg_discount"] = (
+            round(avg_discount, 2) if avg_discount is not None else 0
+        )
+
         risk, created = Risk.objects.get_or_create(
-            vendor=vendor, defaults={"risk_level": "MEDIUM"}  # Default risk level
+            vendor=vendor, defaults={"risk_level": "MEDIUM"}
         )
         context["risk"] = risk
 
