@@ -386,6 +386,7 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+
 @method_decorator(login_required, name="dispatch")
 class DashboardView(LoginRequiredMixin, TemplateView):
     template_name = "core/dashboard.html"
@@ -410,6 +411,7 @@ class DashboardView(LoginRequiredMixin, TemplateView):
         ).order_by("-total_spend")[:5]
         return context
 
+
 @method_decorator(login_required, name="dispatch")
 class VendorListView(ListView):
     model = Vendor
@@ -426,8 +428,8 @@ class VendorListView(ListView):
 
             if search_query:
                 queryset = queryset.filter(
-                    Q(vendor_name__icontains=search_query) |
-                    Q(vendor_id__icontains=search_query)
+                    Q(vendor_name__icontains=search_query)
+                    | Q(vendor_id__icontains=search_query)
                 )
 
             if relationship_type:
@@ -450,9 +452,12 @@ class VendorListView(ListView):
         context["search_query"] = self.request.GET.get("search", "")
         context["relationship_type"] = self.request.GET.get("relationship_type", "")
         context["risk_level"] = self.request.GET.get("risk_level", "")
-        context["vendor_relationship_types"] = Vendor._meta.get_field('relationship_type').choices
-        context["risk_levels"] = Risk._meta.get_field('risk_level').choices
+        context["vendor_relationship_types"] = Vendor._meta.get_field(
+            "relationship_type"
+        ).choices
+        context["risk_levels"] = Risk._meta.get_field("risk_level").choices
         return context
+
 
 @method_decorator(login_required, name="dispatch")
 class VendorProfileView(LoginRequiredMixin, DetailView):
@@ -474,8 +479,15 @@ class VendorProfileView(LoginRequiredMixin, DetailView):
         vendor = self.object
         context["parts"] = vendor.parts.all()
         context["spends"] = vendor.spends.all().order_by("-year")
-        context["risk"] = vendor.risk
+
+        # Get or create the Risk object for the vendor
+        risk, created = Risk.objects.get_or_create(
+            vendor=vendor, defaults={"risk_level": "MEDIUM"}  # Default risk level
+        )
+        context["risk"] = risk
+
         return context
+
 
 @method_decorator(login_required, name="dispatch")
 class VendorCreateView(LoginRequiredMixin, CreateView):
@@ -490,6 +502,7 @@ class VendorCreateView(LoginRequiredMixin, CreateView):
         Risk.objects.create(vendor=self.object, risk_level="LOW")
         return response
 
+
 @method_decorator(login_required, name="dispatch")
 class VendorUpdateView(LoginRequiredMixin, UpdateView):
     model = Vendor
@@ -500,6 +513,7 @@ class VendorUpdateView(LoginRequiredMixin, UpdateView):
     @log_error
     def form_valid(self, form):
         return super().form_valid(form)
+
 
 # You can add more views here as needed, such as views for Part, Spend, and Risk models
 
@@ -1315,21 +1329,39 @@ File: core\templates\core\vendor_profile.html
         <div class="col-md-6">
             <h2>Vendor Details</h2>
             <table class="table">
-                <tr><th>Vendor ID:</th><td>{{ vendor.vendor_id }}</td></tr>
-                <tr><th>Payment Terms:</th><td>{{ vendor.payment_terms }}</td></tr>
-                <tr><th>Credit Limit:</th><td>${{ vendor.credit_limit|floatformat:2 }}</td></tr>
-                <tr><th>Contract Year:</th><td>{{ vendor.contract_year }}</td></tr>
-                <tr><th>Relationship Type:</th><td>{{ vendor.get_relationship_type_display }}</td></tr>
+                <tr>
+                    <th>Vendor ID:</th>
+                    <td>{{ vendor.vendor_id }}</td>
+                </tr>
+                <tr>
+                    <th>Payment Terms:</th>
+                    <td>{{ vendor.payment_terms }}</td>
+                </tr>
+                <tr>
+                    <th>Credit Limit:</th>
+                    <td>${{ vendor.credit_limit|floatformat:2 }}</td>
+                </tr>
+                <tr>
+                    <th>Contract Year:</th>
+                    <td>{{ vendor.contract_year }}</td>
+                </tr>
+                <tr>
+                    <th>Relationship Type:</th>
+                    <td>{{ vendor.get_relationship_type_display }}</td>
+                </tr>
             </table>
         </div>
         <div class="col-md-6">
             <h2>Risk Assessment</h2>
             {% if risk %}
-                <p class="alert alert-{{ risk.get_risk_level_display|lower }}">
-                    Risk Level: {{ risk.get_risk_level_display }}
-                </p>
+            <p class="alert alert-{{ risk.get_risk_level_display|lower }}">
+                Risk Level: {{ risk.get_risk_level_display }}
+                {% if risk.risk_level == "MEDIUM" %}
+                <br><small>(This is a default risk level and will be updated in the future.)</small>
+                {% endif %}
+            </p>
             {% else %}
-                <p class="alert alert-warning">No risk assessment available for this vendor.</p>
+            <p class="alert alert-warning">No risk assessment available for this vendor.</p>
             {% endif %}
         </div>
     </div>
@@ -1338,49 +1370,49 @@ File: core\templates\core\vendor_profile.html
         <div class="col-md-6">
             <h2>Parts</h2>
             {% if parts %}
-                <table class="table table-striped">
-                    <thead>
-                        <tr>
-                            <th>Part Number</th>
-                            <th>Buyer</th>
-                            <th>Discount</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for part in parts %}
-                        <tr>
-                            <td>{{ part.part_number }}</td>
-                            <td>{{ part.buyer }}</td>
-                            <td>{{ part.discount }}%</td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>Part Number</th>
+                        <th>Buyer</th>
+                        <th>Discount</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for part in parts %}
+                    <tr>
+                        <td>{{ part.part_number }}</td>
+                        <td>{{ part.buyer }}</td>
+                        <td>{{ part.discount }}%</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
             {% else %}
-                <p>No parts found for this vendor.</p>
+            <p>No parts found for this vendor.</p>
             {% endif %}
         </div>
         <div class="col-md-6">
             <h2>Spend History</h2>
             {% if spends %}
-                <table class="table table-striped">
-                    <thead>
-                        <tr>
-                            <th>Year</th>
-                            <th>Amount</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for spend in spends %}
-                        <tr>
-                            <td>{{ spend.year }}</td>
-                            <td>${{ spend.usd_amount|floatformat:2 }}</td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>Year</th>
+                        <th>Amount</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for spend in spends %}
+                    <tr>
+                        <td>{{ spend.year }}</td>
+                        <td>${{ spend.usd_amount|floatformat:2 }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
             {% else %}
-                <p>No spend history found for this vendor.</p>
+            <p>No spend history found for this vendor.</p>
             {% endif %}
         </div>
     </div>
@@ -1405,25 +1437,25 @@ File: core\templates\core\vendor_profile.html
         type: 'line',
         data: {
             labels: [{% for spend in spends %}'{{ spend.year }}',{% endfor %}],
-            datasets: [{
-                label: 'Spend Amount',
-                data: [{% for spend in spends %}{{ spend.usd_amount }},{% endfor %}],
-                borderColor: 'rgb(75, 192, 192)',
-                tension: 0.1
+    datasets: [{
+        label: 'Spend Amount',
+        data: [{% for spend in spends %}{{ spend.usd_amount }}, {% endfor %}],
+        borderColor: 'rgb(75, 192, 192)',
+            tension: 0.1
             }]
         },
-        options: {
-            responsive: true,
+    options: {
+        responsive: true,
             scales: {
-                y: {
-                    beginAtZero: true,
+            y: {
+                beginAtZero: true,
                     title: {
-                        display: true,
+                    display: true,
                         text: 'USD Amount'
-                    }
                 }
             }
         }
+    }
     });
 
     // Parts Distribution Chart
@@ -1432,25 +1464,25 @@ File: core\templates\core\vendor_profile.html
         type: 'pie',
         data: {
             labels: [{% for part in parts %}'{{ part.part_number }}',{% endfor %}],
-            datasets: [{
-                data: [{% for part in parts %}1,{% endfor %}],
-                backgroundColor: [
-                    'rgba(255, 99, 132, 0.8)',
-                    'rgba(54, 162, 235, 0.8)',
-                    'rgba(255, 206, 86, 0.8)',
-                    'rgba(75, 192, 192, 0.8)',
-                    'rgba(153, 102, 255, 0.8)',
-                ]
+    datasets: [{
+        data: [{% for part in parts %}1, {% endfor %}],
+        backgroundColor: [
+            'rgba(255, 99, 132, 0.8)',
+            'rgba(54, 162, 235, 0.8)',
+            'rgba(255, 206, 86, 0.8)',
+            'rgba(75, 192, 192, 0.8)',
+            'rgba(153, 102, 255, 0.8)',
+        ]
             }]
         },
-        options: {
-            responsive: true,
+    options: {
+        responsive: true,
             plugins: {
-                legend: {
-                    position: 'right',
+            legend: {
+                position: 'right',
                 }
-            }
         }
+    }
     });
 </script>
 """
@@ -1517,7 +1549,7 @@ File: data_import\import_handlers.py
 
 import pandas as pd
 from django.db import transaction
-from core.models import Vendor, Part, Spend
+from core.models import Vendor, Part, Spend, Risk
 from .models import DiscountImport, SpendImport, VendorImport
 from django.db import IntegrityError
 
@@ -1605,6 +1637,10 @@ def import_spend(df):
     SpendImport.objects.all().delete()
 
 
+# data_import/import_handlers.py
+
+
+@transaction.atomic
 def import_vendors(df):
     required_columns = [
         "part_number",
@@ -1645,6 +1681,11 @@ def import_vendors(df):
                 "contract_year": vendor_import.contract_year,
                 "relationship_type": vendor_import.relationship_type,
             },
+        )
+
+        # Create or update the Risk object for the vendor
+        Risk.objects.update_or_create(
+            vendor=vendor, defaults={"risk_level": "MEDIUM"}  # Default risk level
         )
 
         Part.objects.update_or_create(

@@ -2,7 +2,7 @@
 
 import pandas as pd
 from django.db import transaction
-from core.models import Vendor, Part, Spend
+from core.models import Vendor, Part, Spend, Risk
 from .models import DiscountImport, SpendImport, VendorImport
 from django.db import IntegrityError
 
@@ -91,6 +91,7 @@ def import_spend(df):
 
 
 # data_import/import_handlers.py
+
 
 @transaction.atomic
 def import_vendors(df):
