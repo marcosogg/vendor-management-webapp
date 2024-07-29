@@ -52,6 +52,11 @@ def generate_tree(project_root, relevant_dirs):
 def concatenate_files(project_root, output_file):
     relevant_dirs = ["core", "data_import", "templates", "vendor_management"]
 
+    # Delete existing output file if it exists
+    if os.path.exists(output_file):
+        os.remove(output_file)
+        logging.info(f"Deleted existing {output_file}")
+
     with open(output_file, "w", encoding="utf-8") as outfile:
         # First, write the directory tree
         tree = generate_tree(project_root, relevant_dirs)

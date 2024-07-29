@@ -11,7 +11,8 @@ class Command(BaseCommand):
     help = "Populates the database with sample data for testing"
 
     @transaction.atomic
-    def handle(self, *args, **kwargs):
+    def handle(self, *args, **kwargs):0	494775.45	2024	DIRECT	2024-07-27 16:29:39.408634	2024-07-27 16:29:39.408634
+    8	Staples Promotional (Accenture Store Card - USD)	STAPACUS	N30	1585622.2	2024	THIRD PARTY
         self.stdout.write("Populating database...")
 
         # Sample data

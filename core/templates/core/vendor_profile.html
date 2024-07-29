@@ -10,21 +10,39 @@
         <div class="col-md-6">
             <h2>Vendor Details</h2>
             <table class="table">
-                <tr><th>Vendor ID:</th><td>{{ vendor.vendor_id }}</td></tr>
-                <tr><th>Payment Terms:</th><td>{{ vendor.payment_terms }}</td></tr>
-                <tr><th>Credit Limit:</th><td>${{ vendor.credit_limit|floatformat:2 }}</td></tr>
-                <tr><th>Contract Year:</th><td>{{ vendor.contract_year }}</td></tr>
-                <tr><th>Relationship Type:</th><td>{{ vendor.get_relationship_type_display }}</td></tr>
+                <tr>
+                    <th>Vendor ID:</th>
+                    <td>{{ vendor.vendor_id }}</td>
+                </tr>
+                <tr>
+                    <th>Payment Terms:</th>
+                    <td>{{ vendor.payment_terms }}</td>
+                </tr>
+                <tr>
+                    <th>Credit Limit:</th>
+                    <td>${{ vendor.credit_limit|floatformat:2 }}</td>
+                </tr>
+                <tr>
+                    <th>Contract Year:</th>
+                    <td>{{ vendor.contract_year }}</td>
+                </tr>
+                <tr>
+                    <th>Relationship Type:</th>
+                    <td>{{ vendor.get_relationship_type_display }}</td>
+                </tr>
             </table>
         </div>
         <div class="col-md-6">
             <h2>Risk Assessment</h2>
             {% if risk %}
-                <p class="alert alert-{{ risk.get_risk_level_display|lower }}">
-                    Risk Level: {{ risk.get_risk_level_display }}
-                </p>
+            <p class="alert alert-{{ risk.get_risk_level_display|lower }}">
+                Risk Level: {{ risk.get_risk_level_display }}
+                {% if risk.risk_level == "MEDIUM" %}
+                <br><small>(This is a default risk level and will be updated in the future.)</small>
+                {% endif %}
+            </p>
             {% else %}
-                <p class="alert alert-warning">No risk assessment available for this vendor.</p>
+            <p class="alert alert-warning">No risk assessment available for this vendor.</p>
             {% endif %}
         </div>
     </div>
@@ -33,49 +51,49 @@
         <div class="col-md-6">
             <h2>Parts</h2>
             {% if parts %}
-                <table class="table table-striped">
-                    <thead>
-                        <tr>
-                            <th>Part Number</th>
-                            <th>Buyer</th>
-                            <th>Discount</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for part in parts %}
-                        <tr>
-                            <td>{{ part.part_number }}</td>
-                            <td>{{ part.buyer }}</td>
-                            <td>{{ part.discount }}%</td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>Part Number</th>
+                        <th>Buyer</th>
+                        <th>Discount</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for part in parts %}
+                    <tr>
+                        <td>{{ part.part_number }}</td>
+                        <td>{{ part.buyer }}</td>
+                        <td>{{ part.discount }}%</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
             {% else %}
-                <p>No parts found for this vendor.</p>
+            <p>No parts found for this vendor.</p>
             {% endif %}
         </div>
         <div class="col-md-6">
             <h2>Spend History</h2>
             {% if spends %}
-                <table class="table table-striped">
-                    <thead>
-                        <tr>
-                            <th>Year</th>
-                            <th>Amount</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for spend in spends %}
-                        <tr>
-                            <td>{{ spend.year }}</td>
-                            <td>${{ spend.usd_amount|floatformat:2 }}</td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>Year</th>
+                        <th>Amount</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for spend in spends %}
+                    <tr>
+                        <td>{{ spend.year }}</td>
+                        <td>${{ spend.usd_amount|floatformat:2 }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
             {% else %}
-                <p>No spend history found for this vendor.</p>
+            <p>No spend history found for this vendor.</p>
             {% endif %}
         </div>
     </div>
@@ -100,25 +118,25 @@
         type: 'line',
         data: {
             labels: [{% for spend in spends %}'{{ spend.year }}',{% endfor %}],
-            datasets: [{
-                label: 'Spend Amount',
-                data: [{% for spend in spends %}{{ spend.usd_amount }},{% endfor %}],
-                borderColor: 'rgb(75, 192, 192)',
-                tension: 0.1
+    datasets: [{
+        label: 'Spend Amount',
+        data: [{% for spend in spends %}{{ spend.usd_amount }}, {% endfor %}],
+        borderColor: 'rgb(75, 192, 192)',
+            tension: 0.1
             }]
         },
-        options: {
-            responsive: true,
+    options: {
+        responsive: true,
             scales: {
-                y: {
-                    beginAtZero: true,
+            y: {
+                beginAtZero: true,
                     title: {
-                        display: true,
+                    display: true,
                         text: 'USD Amount'
-                    }
                 }
             }
         }
+    }
     });
 
     // Parts Distribution Chart
@@ -127,24 +145,24 @@
         type: 'pie',
         data: {
             labels: [{% for part in parts %}'{{ part.part_number }}',{% endfor %}],
-            datasets: [{
-                data: [{% for part in parts %}1,{% endfor %}],
-                backgroundColor: [
-                    'rgba(255, 99, 132, 0.8)',
-                    'rgba(54, 162, 235, 0.8)',
-                    'rgba(255, 206, 86, 0.8)',
-                    'rgba(75, 192, 192, 0.8)',
-                    'rgba(153, 102, 255, 0.8)',
-                ]
+    datasets: [{
+        data: [{% for part in parts %}1, {% endfor %}],
+        backgroundColor: [
+            'rgba(255, 99, 132, 0.8)',
+            'rgba(54, 162, 235, 0.8)',
+            'rgba(255, 206, 86, 0.8)',
+            'rgba(75, 192, 192, 0.8)',
+            'rgba(153, 102, 255, 0.8)',
+        ]
             }]
         },
-        options: {
-            responsive: true,
+    options: {
+        responsive: true,
             plugins: {
-                legend: {
-                    position: 'right',
+            legend: {
+                position: 'right',
                 }
-            }
         }
+    }
     });
 </script>

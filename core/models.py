@@ -56,9 +56,6 @@ class Spend(models.Model):
     class Meta:
         unique_together = ["vendor", "year"]
 
-    def __str__(self):
-        return f"{self.vendor.vendor_name} - {self.year}: ${self.usd_amount}"
-
 
 class Risk(models.Model):
     vendor = models.OneToOneField(Vendor, on_delete=models.CASCADE, related_name="risk")

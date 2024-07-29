@@ -17,6 +17,7 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+
 @method_decorator(login_required, name="dispatch")
 class DashboardView(LoginRequiredMixin, TemplateView):
     template_name = "core/dashboard.html"
@@ -41,6 +42,7 @@ class DashboardView(LoginRequiredMixin, TemplateView):
         ).order_by("-total_spend")[:5]
         return context
 
+
 @method_decorator(login_required, name="dispatch")
 class VendorListView(ListView):
     model = Vendor
@@ -57,8 +59,8 @@ class VendorListView(ListView):
 
             if search_query:
                 queryset = queryset.filter(
-                    Q(vendor_name__icontains=search_query) |
-                    Q(vendor_id__icontains=search_query)
+                    Q(vendor_name__icontains=search_query)
+                    | Q(vendor_id__icontains=search_query)
                 )
 
             if relationship_type:
@@ -81,9 +83,12 @@ class VendorListView(ListView):
         context["search_query"] = self.request.GET.get("search", "")
         context["relationship_type"] = self.request.GET.get("relationship_type", "")
         context["risk_level"] = self.request.GET.get("risk_level", "")
-        context["vendor_relationship_types"] = Vendor._meta.get_field('relationship_type').choices
-        context["risk_levels"] = Risk._meta.get_field('risk_level').choices
+        context["vendor_relationship_types"] = Vendor._meta.get_field(
+            "relationship_type"
+        ).choices
+        context["risk_levels"] = Risk._meta.get_field("risk_level").choices
         return context
+
 
 @method_decorator(login_required, name="dispatch")
 class VendorProfileView(LoginRequiredMixin, DetailView):
@@ -105,8 +110,15 @@ class VendorProfileView(LoginRequiredMixin, DetailView):
         vendor = self.object
         context["parts"] = vendor.parts.all()
         context["spends"] = vendor.spends.all().order_by("-year")
-        context["risk"] = vendor.risk
+
+        # Get or create the Risk object for the vendor
+        risk, created = Risk.objects.get_or_create(
+            vendor=vendor, defaults={"risk_level": "MEDIUM"}  # Default risk level
+        )
+        context["risk"] = risk
+
         return context
+
 
 @method_decorator(login_required, name="dispatch")
 class VendorCreateView(LoginRequiredMixin, CreateView):
@@ -121,6 +133,7 @@ class VendorCreateView(LoginRequiredMixin, CreateView):
         Risk.objects.create(vendor=self.object, risk_level="LOW")
         return response
 
+
 @method_decorator(login_required, name="dispatch")
 class VendorUpdateView(LoginRequiredMixin, UpdateView):
     model = Vendor
@@ -131,5 +144,6 @@ class VendorUpdateView(LoginRequiredMixin, UpdateView):
     @log_error
     def form_valid(self, form):
         return super().form_valid(form)
+
 
 # You can add more views here as needed, such as views for Part, Spend, and Risk models
