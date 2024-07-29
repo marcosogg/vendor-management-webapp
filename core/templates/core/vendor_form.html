@@ -1,12 +1,76 @@
 {% extends 'base.html' %}
 
 {% block content %}
-<h1>{% if form.instance.pk %}Edit{% else %}Add{% endif %} Vendor</h1>
-<form method="post">
+<h1 class="text-3xl font-bold mb-6 text-navy">{% if form.instance.pk %}Edit{% else %}Add{% endif %} Vendor</h1>
+<form method="post" id="vendorForm" class="bg-white shadow-md rounded px-8 pt-6 pb-8 mb-4">
     {% csrf_token %}
-    {% buttons %}
-        <button type="submit" class="btn btn-primary">Save</button>
-        <a href="{% url 'vendor-list' %}" class="btn btn-secondary">Cancel</a>
-    {% endbuttons %}
+    {% for field in form %}
+    <div class="mb-4">
+        <label class="block text-gray-700 text-sm font-bold mb-2" for="{{ field.id_for_label }}">
+            {{ field.label }}
+        </label>
+        {{ field }}
+        <p class="text-red-500 text-xs italic hidden" id="{{ field.id_for_label }}_error"></p>
+    </div>
+    {% endfor %}
+    <div class="flex items-center justify-between">
+        <button class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline" type="submit">
+            Save
+        </button>
+        <a class="inline-block align-baseline font-bold text-sm text-blue-500 hover:text-blue-800" href="{% url 'vendor_list' %}">
+            Cancel
+        </a>
+    </div>
 </form>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.getElementById('vendorForm');
+    const fields = form.querySelectorAll('input, select');
+
+    fields.forEach(field => {
+        field.addEventListener('blur', function() {
+            validateField(this);
+        });
+    });
+
+    form.addEventListener('submit', function(e) {
+        let isValid = true;
+        fields.forEach(field => {
+            if (!validateField(field)) {
+                isValid = false;
+            }
+        });
+
+        if (!isValid) {
+            e.preventDefault();
+        }
+    });
+
+    function validateField(field) {
+        const errorElement = document.getElementById(`${field.id}_error`);
+        let isValid = true;
+
+        if (field.required && !field.value) {
+            errorElement.textContent = 'This field is required.';
+            errorElement.classList.remove('hidden');
+            isValid = false;
+        } else if (field.type === 'email' && !isValidEmail(field.value)) {
+            errorElement.textContent = 'Please enter a valid email address.';
+            errorElement.classList.remove('hidden');
+            isValid = false;
+        } else {
+            errorElement.textContent = '';
+            errorElement.classList.add('hidden');
+        }
+
+        return isValid;
+    }
+
+    function isValidEmail(email) {
+        const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        return re.test(email);
+    }
+});
+</script>
 {% endblock %}

@@ -1,5 +1,6 @@
 from django.db import models
 from django.core.validators import MinValueValidator, MaxValueValidator
+from django.contrib.auth.models import User
 
 
 class Vendor(models.Model):
@@ -67,3 +68,13 @@ class Risk(models.Model):
 
     def __str__(self):
         return f"{self.vendor.vendor_name} - Risk: {self.get_risk_level_display()}"
+
+
+class Activity(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    action = models.CharField(max_length=255)
+    details = models.TextField()
+    date = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-date"]

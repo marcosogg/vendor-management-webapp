@@ -1,0 +1,26 @@
+{% extends 'base.html' %}
+
+{% block title %}Search Results - Vendor Management{% endblock %}
+
+{% block content %}
+<h1 class="text-3xl font-bold mb-6 text-navy">Search Results</h1>
+
+<div class="bg-white shadow-md rounded-lg p-6">
+    <h2 class="text-xl font-semibold mb-4 text-navy">Results for "{{ query }}"</h2>
+
+    {% if results %}
+    <ul class="divide-y divide-gray-200">
+        {% for result in results %}
+        <li class="py-4">
+            <h3 class="text-lg font-medium text-gray-900">{{ result.title }} <span class="text-sm text-gray-500">({{
+                    result.type }})</span></h3>
+            <p class="mt-1 text-sm text-gray-600">{{ result.description }}</p>
+            <a href="{{ result.url }}" class="mt-2 text-sm text-blue-600 hover:underline">View details</a>
+        </li>
+        {% endfor %}
+    </ul>
+    {% else %}
+    <p class="text-gray-600">No results found for "{{ query }}".</p>
+    {% endif %}
+</div>
+{% endblock %}

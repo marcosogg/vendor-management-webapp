@@ -5,7 +5,11 @@ from django.contrib import messages
 from .forms import FileUploadForm
 from .import_handlers import handle_uploaded_file
 import traceback
+from core.models import Activity
+from django.contrib.auth.decorators import login_required
 
+
+@login_required
 def import_data(request):
     if request.method == "POST":
         form = FileUploadForm(request.POST, request.FILES)
@@ -14,6 +18,14 @@ def import_data(request):
             uploaded_file = request.FILES["file"]
             try:
                 records_imported = handle_uploaded_file(uploaded_file, import_type)
+
+                # Create an Activity record for the import
+                Activity.objects.create(
+                    user=request.user,
+                    action=f"Import {import_type}",
+                    details=f"Successfully imported/updated {records_imported} records for {import_type}.",
+                )
+
                 messages.success(
                     request,
                     f"Successfully imported/updated {records_imported} records for {import_type}.",
@@ -25,7 +37,6 @@ def import_data(request):
                 messages.error(
                     request, f"An unexpected error occurred during import: {str(e)}"
                 )
-                # Print the full traceback for debugging
                 print(traceback.format_exc())
     else:
         form = FileUploadForm()

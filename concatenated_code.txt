@@ -31,6 +31,8 @@ Directory structure of included files:
                     └── pagination.html
                     └── part_form.html
                     └── risk_form.html
+                    └── search_results.html
+                    └── skeleton-loader.html
                     └── spend_form.html
                     └── vendor_form.html
                     └── vendor_list.html
@@ -195,6 +197,7 @@ File: core\models.py
 """
 from django.db import models
 from django.core.validators import MinValueValidator, MaxValueValidator
+from django.contrib.auth.models import User
 
 
 class Vendor(models.Model):
@@ -262,6 +265,16 @@ class Risk(models.Model):
 
     def __str__(self):
         return f"{self.vendor.vendor_name} - Risk: {self.get_risk_level_display()}"
+
+
+class Activity(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    action = models.CharField(max_length=255)
+    details = models.TextField()
+    date = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-date"]
 
 """
 
@@ -332,12 +345,13 @@ File: core\urls.py
 ================================================================================
 """
 from django.urls import path
-from .views import DashboardView, VendorListView, VendorProfileView
+from .views import DashboardView, VendorListView, VendorProfileView, global_search
 
 urlpatterns = [
     path("", DashboardView.as_view(), name="dashboard"),
     path("vendors/", VendorListView.as_view(), name="vendor_list"),
     path("vendors/<int:pk>/", VendorProfileView.as_view(), name="vendor_profile"),
+    path("search/", global_search, name="global_search"),
 ]
 
 """
@@ -378,74 +392,78 @@ from django.contrib.auth.decorators import login_required
 from django.utils.html import escape
 from django.core.exceptions import ValidationError
 
-from .models import Vendor, Part, Spend, Risk
+from .models import Vendor, Part, Spend, Risk, Activity
 from .forms import VendorForm
 from .utils import log_error
+from django.db.models import Q
+from django.shortcuts import render
 
 import logging
+import math
 
 logger = logging.getLogger(__name__)
+
+
+def format_number(num):
+    if num >= 1_000_000_000:  # Billions
+        return f"${num / 1_000_000_000:.2f}B"
+    elif num >= 1_000_000:  # Millions
+        return f"${num / 1_000_000:.2f}M"
+    elif num >= 1_000:  # Thousands
+        return f"${num / 1_000:.2f}K"
+    else:
+        return f"${num:,.2f}"
 
 
 @method_decorator(login_required, name="dispatch")
 class DashboardView(LoginRequiredMixin, TemplateView):
     template_name = "core/dashboard.html"
 
-    # @method_decorator(cache_page(60 * 15))  # Cache for 15 minutes
-    def get(self, request, *args, **kwargs):
-        return super().get(request, *args, **kwargs)
-
     @log_error
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context["total_vendors"] = Vendor.objects.count()
         context["total_parts"] = Part.objects.count()
-        context["total_spend"] = (
-            Spend.objects.aggregate(Sum("usd_amount"))["usd_amount__sum"] or 0
-        )
+
+        total_spend = Spend.objects.aggregate(Sum("usd_amount"))["usd_amount__sum"] or 0
+        context["total_spend"] = format_number(total_spend)
+
         context["high_risk_vendors"] = Vendor.objects.filter(
             risk__risk_level="HIGH"
         ).count()
         context["top_vendors"] = Vendor.objects.annotate(
             total_spend=Sum("spends__usd_amount")
         ).order_by("-total_spend")[:5]
+
         return context
 
 
 @method_decorator(login_required, name="dispatch")
-class VendorListView(ListView):
+class VendorListView(LoginRequiredMixin, ListView):
     model = Vendor
     template_name = "core/vendor_list.html"
     context_object_name = "vendors"
     paginate_by = 10
 
     def get_queryset(self):
-        try:
-            queryset = super().get_queryset().select_related("risk")
-            search_query = escape(self.request.GET.get("search", ""))
-            relationship_type = escape(self.request.GET.get("relationship_type", ""))
-            risk_level = escape(self.request.GET.get("risk_level", ""))
+        queryset = super().get_queryset().select_related("risk")
+        search_query = self.request.GET.get("search", "")
+        relationship_type = self.request.GET.get("relationship_type", "")
+        risk_level = self.request.GET.get("risk_level", "")
 
-            if search_query:
-                queryset = queryset.filter(
-                    Q(vendor_name__icontains=search_query)
-                    | Q(vendor_id__icontains=search_query)
-                )
+        if search_query:
+            queryset = queryset.filter(
+                Q(vendor_name__icontains=search_query)
+                | Q(vendor_id__icontains=search_query)
+            )
 
-            if relationship_type:
-                queryset = queryset.filter(relationship_type=relationship_type)
+        if relationship_type:
+            queryset = queryset.filter(relationship_type=relationship_type)
 
-            if risk_level:
-                queryset = queryset.filter(risk__risk_level=risk_level)
+        if risk_level:
+            queryset = queryset.filter(risk__risk_level=risk_level)
 
-            logger.debug(f"Vendor query: {queryset.query}")
-            return queryset
-        except ValidationError as e:
-            logger.error(f"Validation error in VendorListView: {e}")
-            return Vendor.objects.none()
-        except Exception as e:
-            logger.error(f"Unexpected error in VendorListView: {e}")
-            return Vendor.objects.none()
+        return queryset
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -515,7 +533,49 @@ class VendorUpdateView(LoginRequiredMixin, UpdateView):
         return super().form_valid(form)
 
 
-# You can add more views here as needed, such as views for Part, Spend, and Risk models
+def global_search(request):
+    query = request.GET.get("q")
+    results = []
+    if query:
+        vendor_results = Vendor.objects.filter(
+            Q(vendor_name__icontains=query) | Q(vendor_id__icontains=query)
+        )
+        part_results = Part.objects.filter(part_number__icontains=query)
+        spend_results = Spend.objects.filter(vendor__vendor_name__icontains=query)
+
+        for vendor in vendor_results:
+            results.append(
+                {
+                    "type": "Vendor",
+                    "title": vendor.vendor_name,
+                    "description": f"Vendor ID: {vendor.vendor_id}",
+                    "url": f"/vendors/{vendor.id}/",  # Adjust this URL as needed
+                }
+            )
+
+        for part in part_results:
+            results.append(
+                {
+                    "type": "Part",
+                    "title": part.part_number,
+                    "description": f"Vendor: {part.vendor.vendor_name}",
+                    "url": f"/vendors/{part.vendor.id}/",  # Adjust this URL as needed
+                }
+            )
+
+        for spend in spend_results:
+            results.append(
+                {
+                    "type": "Spend",
+                    "title": f"Spend for {spend.vendor.vendor_name}",
+                    "description": f"Year: {spend.year}, Amount: ${spend.usd_amount}",
+                    "url": f"/vendors/{spend.vendor.id}/",  # Adjust this URL as needed
+                }
+            )
+
+    return render(
+        request, "core/search_results.html", {"query": query, "results": results}
+    )
 
 """
 
@@ -889,58 +949,224 @@ File: core\templates\core\dashboard.html
 {% extends 'base.html' %}
 {% load humanize %}
 
-{% block content %}
-<h1 class="text-3xl font-bold mb-6">Vendor Management Dashboard</h1>
+{% block title %}Dashboard - Vendor Management{% endblock %}
 
-<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-    <div class="bg-white rounded-lg shadow-md p-6">
-        <h5 class="text-lg font-semibold mb-2">Total Vendors</h5>
-        <p class="text-3xl font-bold">{{ total_vendors }}</p>
+{% block content %}
+<h1 class="text-3xl font-bold mb-6 text-navy dashboard-header">Vendor Management Dashboard</h1>
+
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8 metrics-grid">
+    <div class="bg-white rounded-lg shadow-md p-6 transition-all hover:shadow-lg"
+        data-tippy-content="Total number of vendors in the system">
+        <h2 class="text-lg font-semibold mb-2 text-navy">Total Vendors</h2>
+        <p class="text-3xl font-bold text-raspberry">{{ total_vendors }}</p>
     </div>
-    <div class="bg-white rounded-lg shadow-md p-6">
-        <h5 class="text-lg font-semibold mb-2">Total Parts</h5>
-        <p class="text-3xl font-bold">{{ total_parts }}</p>
+    <div class="bg-white rounded-lg shadow-md p-6 transition-all hover:shadow-lg"
+        data-tippy-content="Total number of parts across all vendors">
+        <h2 class="text-lg font-semibold mb-2 text-navy">Total Parts</h2>
+        <p class="text-3xl font-bold text-raspberry">{{ total_parts }}</p>
     </div>
-    <div class="bg-white rounded-lg shadow-md p-6">
-        <h5 class="text-lg font-semibold mb-2">Total Spend</h5>
-        <p class="text-3xl font-bold">${{ total_spend|intcomma }}</p>
+    <div class="bg-white rounded-lg shadow-md p-6 transition-all hover:shadow-lg"
+        data-tippy-content="Total spend across all vendors">
+        <h2 class="text-lg font-semibold mb-2 text-navy">Total Spend</h2>
+        <p class="text-3xl font-bold text-raspberry">${{ total_spend|intcomma }}</p>
     </div>
-    <div class="bg-white rounded-lg shadow-md p-6">
-        <h5 class="text-lg font-semibold mb-2">High Risk Vendors</h5>
-        <p class="text-3xl font-bold">{{ high_risk_vendors }}</p>
+    <div class="bg-white rounded-lg shadow-md p-6 transition-all hover:shadow-lg"
+        data-tippy-content="Number of vendors classified as high risk">
+        <h2 class="text-lg font-semibold mb-2 text-navy">High Risk Vendors</h2>
+        <p class="text-3xl font-bold text-raspberry">{{ high_risk_vendors }}</p>
     </div>
 </div>
 
-<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-    <div class="bg-white rounded-lg shadow-md p-6">
-        <h2 class="text-xl font-semibold mb-4">Top 5 Vendors by Spend</h2>
-        <table class="w-full">
-            <thead>
-                <tr>
-                    <th class="text-left py-2">Vendor</th>
-                    <th class="text-right py-2">Total Spend</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for vendor in top_vendors %}
-                <tr>
-                    <td class="py-2">{{ vendor.vendor_name }}</td>
-                    <td class="text-right py-2">${{ vendor.total_spend|floatformat:0|intcomma }}</td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+    <div class="bg-white rounded-lg shadow-md p-6 transition-all hover:shadow-lg">
+        <h2 class="text-xl font-semibold mb-4 text-navy">Top 5 Vendors by Spend</h2>
+        <canvas id="topVendorsChart"></canvas>
     </div>
-    <div class="bg-white rounded-lg shadow-md p-6">
-        <h2 class="text-xl font-semibold mb-4">Quick Links</h2>
+    <div class="bg-white rounded-lg shadow-md p-6 transition-all hover:shadow-lg">
+        <h2 class="text-xl font-semibold mb-4 text-navy">Quick Links</h2>
         <ul class="space-y-2">
-            <li><a href="{% url 'vendor_list' %}" class="text-blue-600 hover:underline">View All Vendors</a></li>
-            <li><a href="{% url 'import_data' %}" class="text-blue-600 hover:underline">Import Data</a></li>
+            <li><a href="{% url 'vendor_list' %}" class="text-blue-600 hover:underline transition-all">View All
+                    Vendors</a></li>
+            <li><a href="{% url 'import_data' %}" class="text-blue-600 hover:underline transition-all">Import Data</a>
+            </li>
         </ul>
     </div>
 </div>
-{% endblock %}
 
+<div class="bg-white rounded-lg shadow-md p-6 transition-all hover:shadow-lg">
+    <h2 class="text-xl font-semibold mb-4 text-navy">Recent Activity</h2>
+    <table class="min-w-full divide-y divide-gray-200">
+        <thead class="bg-gray-50">
+            <tr>
+                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Date</th>
+                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Action</th>
+                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Details</th>
+            </tr>
+        </thead>
+        <tbody class="bg-white divide-y divide-gray-200">
+            {% for activity in recent_activities %}
+            <tr class="hover:bg-gray-50 transition-all">
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ activity.date|date:"Y-m-d H:i" }}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ activity.action }}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ activity.details }}</td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="3" class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-center">No recent activity
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        // Chart.js initialization
+        var ctx = document.getElementById('topVendorsChart').getContext('2d');
+        var chart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: [{% for vendor in top_vendors %}'{{ vendor.vendor_name }}',{% endfor %}],
+        datasets: [{
+            label: 'Total Spend',
+            data: [{% for vendor in top_vendors %}{{ vendor.total_spend }}, {% endfor %}],
+        backgroundColor: [
+        'rgba(255, 99, 132, 0.8)',
+        'rgba(54, 162, 235, 0.8)',
+        'rgba(255, 206, 86, 0.8)',
+        'rgba(75, 192, 192, 0.8)',
+        'rgba(153, 102, 255, 0.8)'
+    ]
+            }]
+        },
+        options: {
+        responsive: true,
+        scales: {
+            y: {
+                beginAtZero: true,
+                title: {
+                    display: true,
+                    text: 'Total Spend ($)'
+                }
+            }
+        },
+        plugins: {
+            legend: {
+                display: false
+            },
+            tooltip: {
+                callbacks: {
+                    label: function (context) {
+                        let label = context.dataset.label || '';
+                        if (label) {
+                            label += ': ';
+                        }
+                        if (context.parsed.y !== null) {
+                            label += new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(context.parsed.y);
+                        }
+                        return label;
+                    }
+                }
+            }
+        }
+    }
+    });
+
+    // Guided Tour
+    const tour = new Shepherd.Tour({
+        defaultStepOptions: {
+            cancelIcon: {
+                enabled: true
+            },
+            classes: 'shadow-md bg-purple-dark',
+            scrollTo: { behavior: 'smooth', block: 'center' }
+        }
+    });
+
+    tour.addStep({
+        id: 'welcome',
+        text: 'Welcome to the Vendor Management Dashboard! Let\'s take a quick tour.',
+        attachTo: {
+            element: '.dashboard-header',
+            on: 'bottom'
+        },
+        buttons: [
+            {
+                text: 'Next',
+                action: tour.next
+            }
+        ]
+    });
+
+    tour.addStep({
+        id: 'metrics',
+        text: 'Here you can see key metrics at a glance.',
+        attachTo: {
+            element: '.metrics-grid',
+            on: 'bottom'
+        },
+        buttons: [
+            {
+                text: 'Back',
+                action: tour.back
+            },
+            {
+                text: 'Next',
+                action: tour.next
+            }
+        ]
+    });
+
+    tour.addStep({
+        id: 'top-vendors',
+        text: 'This chart shows the top 5 vendors by total spend.',
+        attachTo: {
+            element: '#topVendorsChart',
+            on: 'bottom'
+        },
+        buttons: [
+            {
+                text: 'Back',
+                action: tour.back
+            },
+            {
+                text: 'Next',
+                action: tour.next
+            }
+        ]
+    });
+
+    tour.addStep({
+        id: 'recent-activity',
+        text: 'Here you can see recent activities in the system.',
+        attachTo: {
+            element: 'table',
+            on: 'top'
+        },
+        buttons: [
+            {
+                text: 'Back',
+                action: tour.back
+            },
+            {
+                text: 'Done',
+                action: tour.complete
+            }
+        ]
+    });
+
+    // Start the tour
+    if (!localStorage.getItem('tourCompleted')) {
+        tour.start();
+        localStorage.setItem('tourCompleted', 'true');
+    }
+});
+</script>
+{% endblock %}
 """
 
 ================================================================================
@@ -1091,6 +1317,51 @@ File: core\templates\core\risk_form.html
 """
 
 ================================================================================
+File: core\templates\core\search_results.html
+================================================================================
+"""
+{% extends 'base.html' %}
+
+{% block title %}Search Results - Vendor Management{% endblock %}
+
+{% block content %}
+<h1 class="text-3xl font-bold mb-6 text-navy">Search Results</h1>
+
+<div class="bg-white shadow-md rounded-lg p-6">
+    <h2 class="text-xl font-semibold mb-4 text-navy">Results for "{{ query }}"</h2>
+
+    {% if results %}
+    <ul class="divide-y divide-gray-200">
+        {% for result in results %}
+        <li class="py-4">
+            <h3 class="text-lg font-medium text-gray-900">{{ result.title }} <span class="text-sm text-gray-500">({{
+                    result.type }})</span></h3>
+            <p class="mt-1 text-sm text-gray-600">{{ result.description }}</p>
+            <a href="{{ result.url }}" class="mt-2 text-sm text-blue-600 hover:underline">View details</a>
+        </li>
+        {% endfor %}
+    </ul>
+    {% else %}
+    <p class="text-gray-600">No results found for "{{ query }}".</p>
+    {% endif %}
+</div>
+{% endblock %}
+"""
+
+================================================================================
+File: core\templates\core\skeleton-loader.html
+================================================================================
+"""
+{% load static %}
+
+<div class="animate-pulse">
+    <div class="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
+    <div class="h-4 bg-gray-200 rounded w-1/2 mb-2"></div>
+    <div class="h-4 bg-gray-200 rounded w-5/6"></div>
+</div>
+"""
+
+================================================================================
 File: core\templates\core\spend_form.html
 ================================================================================
 """
@@ -1115,14 +1386,78 @@ File: core\templates\core\vendor_form.html
 {% extends 'base.html' %}
 
 {% block content %}
-<h1>{% if form.instance.pk %}Edit{% else %}Add{% endif %} Vendor</h1>
-<form method="post">
+<h1 class="text-3xl font-bold mb-6 text-navy">{% if form.instance.pk %}Edit{% else %}Add{% endif %} Vendor</h1>
+<form method="post" id="vendorForm" class="bg-white shadow-md rounded px-8 pt-6 pb-8 mb-4">
     {% csrf_token %}
-    {% buttons %}
-        <button type="submit" class="btn btn-primary">Save</button>
-        <a href="{% url 'vendor-list' %}" class="btn btn-secondary">Cancel</a>
-    {% endbuttons %}
+    {% for field in form %}
+    <div class="mb-4">
+        <label class="block text-gray-700 text-sm font-bold mb-2" for="{{ field.id_for_label }}">
+            {{ field.label }}
+        </label>
+        {{ field }}
+        <p class="text-red-500 text-xs italic hidden" id="{{ field.id_for_label }}_error"></p>
+    </div>
+    {% endfor %}
+    <div class="flex items-center justify-between">
+        <button class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline" type="submit">
+            Save
+        </button>
+        <a class="inline-block align-baseline font-bold text-sm text-blue-500 hover:text-blue-800" href="{% url 'vendor_list' %}">
+            Cancel
+        </a>
+    </div>
 </form>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.getElementById('vendorForm');
+    const fields = form.querySelectorAll('input, select');
+
+    fields.forEach(field => {
+        field.addEventListener('blur', function() {
+            validateField(this);
+        });
+    });
+
+    form.addEventListener('submit', function(e) {
+        let isValid = true;
+        fields.forEach(field => {
+            if (!validateField(field)) {
+                isValid = false;
+            }
+        });
+
+        if (!isValid) {
+            e.preventDefault();
+        }
+    });
+
+    function validateField(field) {
+        const errorElement = document.getElementById(`${field.id}_error`);
+        let isValid = true;
+
+        if (field.required && !field.value) {
+            errorElement.textContent = 'This field is required.';
+            errorElement.classList.remove('hidden');
+            isValid = false;
+        } else if (field.type === 'email' && !isValidEmail(field.value)) {
+            errorElement.textContent = 'Please enter a valid email address.';
+            errorElement.classList.remove('hidden');
+            isValid = false;
+        } else {
+            errorElement.textContent = '';
+            errorElement.classList.add('hidden');
+        }
+
+        return isValid;
+    }
+
+    function isValidEmail(email) {
+        const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        return re.test(email);
+    }
+});
+</script>
 {% endblock %}
 """
 
@@ -1133,40 +1468,62 @@ File: core\templates\core\vendor_list.html
 {% extends 'base.html' %}
 {% load static %}
 
+{% block title %}Vendor List - Vendor Management{% endblock %}
+
 {% block content %}
-<h1 class="text-3xl font-bold mb-6">Vendor List</h1>
+<h1 class="text-3xl font-bold mb-6 text-navy">Vendor List</h1>
 
 <div class="bg-white shadow-md rounded-lg p-6 mb-6">
-    <h5 class="text-xl font-semibold mb-4">Search and Filter</h5>
-    <form method="get" id="searchForm" class="space-y-4">
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <input type="text" name="search" class="w-full px-3 py-2 border rounded-md" placeholder="Search vendors..." value="{{ search_query }}">
-            <select name="relationship_type" class="w-full px-3 py-2 border rounded-md">
-                <option value="">All Relationship Types</option>
-                {% for choice in vendor_relationship_types %}
-                <option value="{{ choice.0 }}" {% if choice.0 == relationship_type %} selected{% endif %}>{{ choice.1 }}</option>
-                {% endfor %}
-            </select>
-            <select name="risk_level" class="w-full px-3 py-2 border rounded-md">
-                <option value="">All Risk Levels</option>
-                {% for choice in risk_levels %}
-                <option value="{{ choice.0 }}" {% if choice.0 == risk_level %} selected{% endif %}>{{ choice.1 }}</option>
-                {% endfor %}
-            </select>
-            <button type="button" onclick="resetSearch()" class="w-full px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300">Reset</button>
+    <form method="get" class="mb-4">
+        <div class="flex flex-wrap -mx-3 mb-2">
+            <div class="w-full md:w-1/3 px-3 mb-6 md:mb-0">
+                <input type="text" name="search" value="{{ search_query }}" placeholder="Search vendors..." class="appearance-none block w-full bg-gray-200 text-gray-700 border rounded py-3 px-4 mb-3 leading-tight focus:outline-none focus:bg-white">
+            </div>
+            <div class="w-full md:w-1/3 px-3 mb-6 md:mb-0">
+                <select name="relationship_type" class="block appearance-none w-full bg-gray-200 border border-gray-200 text-gray-700 py-3 px-4 pr-8 rounded leading-tight focus:outline-none focus:bg-white focus:border-gray-500">
+                    <option value="">All Relationship Types</option>
+                    {% for value, display in vendor_relationship_types %}
+                        <option value="{{ value }}" {% if value == relationship_type %}selected{% endif %}>{{ display }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="w-full md:w-1/3 px-3 mb-6 md:mb-0">
+                <select name="risk_level" class="block appearance-none w-full bg-gray-200 border border-gray-200 text-gray-700 py-3 px-4 pr-8 rounded leading-tight focus:outline-none focus:bg-white focus:border-gray-500">
+                    <option value="">All Risk Levels</option>
+                    {% for value, display in risk_levels %}
+                        <option value="{{ value }}" {% if value == risk_level %}selected{% endif %}>{{ display }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+        <div class="flex justify-end">
+            <button type="submit" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline">
+                Filter
+            </button>
         </div>
     </form>
-</div>
 
-<div class="bg-white shadow-md rounded-lg overflow-hidden">
-    <table class="w-full">
+    <table class="min-w-full divide-y divide-gray-200">
         <thead class="bg-gray-50">
             <tr>
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Vendor Name</th>
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Vendor ID</th>
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Payment Terms</th>
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Contract Year</th>
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Relationship Type</th>
+                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Vendor Name
+                </th>
+                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Vendor ID
+                </th>
+                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Payment Terms
+                </th>
+                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Contract Year
+                </th>
+                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Relationship Type
+                </th>
+                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Risk Level
+                </th>
             </tr>
         </thead>
         <tbody class="bg-white divide-y divide-gray-200">
@@ -1175,36 +1532,62 @@ File: core\templates\core\vendor_list.html
                 <td class="px-6 py-4 whitespace-nowrap">
                     <a href="{% url 'vendor_profile' vendor.pk %}" class="text-blue-600 hover:underline">{{ vendor.vendor_name }}</a>
                 </td>
-                <td class="px-6 py-4 whitespace-nowrap">{{ vendor.vendor_id }}</td>
-                <td class="px-6 py-4 whitespace-nowrap">{{ vendor.payment_terms }}</td>
-                <td class="px-6 py-4 whitespace-nowrap">{{ vendor.contract_year }}</td>
+                <td class="px-6 py-4 whitespace-nowrap">
+                    {{ vendor.vendor_id }}
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap">
+                    {{ vendor.payment_terms }}
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap">
+                    {{ vendor.contract_year }}
+                </td>
                 <td class="px-6 py-4 whitespace-nowrap">
                     <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full {% if vendor.relationship_type == 'DIRECT' %}bg-green-100 text-green-800{% else %}bg-gray-100 text-gray-800{% endif %}">
                         {{ vendor.get_relationship_type_display }}
                     </span>
                 </td>
+                <td class="px-6 py-4 whitespace-nowrap">
+                    <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
+                        {% if vendor.risk.risk_level == 'LOW' %}bg-green-100 text-green-800
+                        {% elif vendor.risk.risk_level == 'MEDIUM' %}bg-yellow-100 text-yellow-800
+                        {% else %}bg-red-100 text-red-800{% endif %}">
+                        {{ vendor.risk.get_risk_level_display }}
+                    </span>
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="6" class="px-6 py-4 whitespace-nowrap text-center">
+                    No vendors found.
+                </td>
             </tr>
             {% endfor %}
         </tbody>
     </table>
+
+    {% if is_paginated %}
+    <nav class="bg-white px-4 py-3 flex items-center justify-between border-t border-gray-200 sm:px-6" aria-label="Pagination">
+        <div class="hidden sm:block">
+            <p class="text-sm text-gray-700">
+                Showing page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
+            </p>
+        </div>
+        <div class="flex-1 flex justify-between sm:justify-end">
+            {% if page_obj.has_previous %}
+                <a href="?page={{ page_obj.previous_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}{% if relationship_type %}&relationship_type={{ relationship_type }}{% endif %}{% if risk_level %}&risk_level={{ risk_level }}{% endif %}" class="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+                    Previous
+                </a>
+            {% endif %}
+            {% if page_obj.has_next %}
+                <a href="?page={{ page_obj.next_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}{% if relationship_type %}&relationship_type={{ relationship_type }}{% endif %}{% if risk_level %}&risk_level={{ risk_level }}{% endif %}" class="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+                    Next
+                </a>
+            {% endif %}
+        </div>
+    </nav>
+    {% endif %}
 </div>
-
-{% include 'core/pagination.html' %}
-
-<script>
-    function submitForm() {
-        document.getElementById('searchForm').submit();
-    }
-    
-    function resetSearch() {
-        document.getElementsByName('search')[0].value = '';
-        document.getElementsByName('relationship_type')[0].selectedIndex = 0;
-        document.getElementsByName('risk_level')[0].selectedIndex = 0;
-        submitForm();
-    }
-</script>
 {% endblock %}
-
 """
 
 ================================================================================
@@ -1824,43 +2207,102 @@ File: templates\base.html
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}Vendor Management System{% endblock %}</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        'sans': ['Roboto', 'sans-serif'],
+                        'headline': ['Avenir LT Com', 'sans-serif'],
+                    },
+                    colors: {
+                        'navy': '#0D173D',
+                        'raspberry': '#9C224F',
+                        'red': '#C13838',
+                        'light-blue': '#38D4FF',
+                        'green': '#31A784',
+                        'orange': '#DB6C33',
+                        'orange-50': '#FFF1DB',
+                    },
+                },
+            },
+        }
+    </script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Avenir+LT+Pro:wght@400;700&display=swap');
+
+        .fade-in { animation: fadeIn 0.5s ease-in-out; }
+        .slide-in { animation: slideIn 0.5s ease-in-out; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes slideIn { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+        .transition-all { transition: all 0.3s ease-in-out; }
+    </style>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/chart.js@3.7.1/dist/chart.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.7.1/dist/chart.min.js"></script>
+    <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.10.24/css/jquery.dataTables.css">
+    <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+    <script type="text/javascript" charset="utf8" src="https://cdn.datatables.net/1.10.24/js/jquery.dataTables.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/shepherd.js@8.3.1/dist/css/shepherd.css"/>
+    <script src="https://cdn.jsdelivr.net/npm/shepherd.js@8.3.1/dist/js/shepherd.min.js"></script>
+    <script src="https://unpkg.com/@popperjs/core@2"></script>
+    <script src="https://unpkg.com/tippy.js@6"></script>
 </head>
-<body class="bg-gray-100">
-    <nav class="bg-white shadow-lg">
+<body class="bg-gray-100 font-sans">
+    <nav class="bg-white shadow-lg" aria-label="Main Navigation">
         <div class="max-w-7xl mx-auto px-4">
-            <div class="flex justify-between">
-                <div class="flex space-x-7">
-                    <div>
-                        <a href="{% url 'dashboard' %}" class="flex items-center py-4 px-2">
-                            <span class="font-semibold text-gray-500 text-lg">Vendor Management</span>
-                        </a>
-                    </div>
-                    <div class="hidden md:flex items-center space-x-1">
-                        <a href="{% url 'dashboard' %}" class="py-4 px-2 text-gray-500 hover:text-gray-900">Home</a>
-                        <a href="{% url 'vendor_list' %}" class="py-4 px-2 text-gray-500 hover:text-gray-900">Vendors</a>
-                        <a href="{% url 'import_data' %}" class="py-4 px-2 text-gray-500 hover:text-gray-900">Import Data</a>
+            <div class="flex justify-between items-center py-4">
+                <div class="flex items-center">
+                    <a href="{% url 'dashboard' %}" class="flex items-center">
+                        <span class="font-headline font-bold text-navy text-lg">Vendor Management</span>
+                    </a>
+                    <div class="hidden md:flex items-center space-x-4 ml-10">
+                        <a href="{% url 'dashboard' %}" class="text-navy hover:text-raspberry transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-light-blue" aria-current="page">Home</a>
+                        <a href="{% url 'vendor_list' %}" class="text-navy hover:text-raspberry transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-light-blue">Vendors</a>
+                        <a href="{% url 'import_data' %}" class="text-navy hover:text-raspberry transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-light-blue">Import Data</a>
                     </div>
                 </div>
-                <div class="hidden md:flex items-center space-x-3">
+                <div class="flex items-center space-x-4">
+                    <form action="{% url 'global_search' %}" method="get" class="hidden md:flex items-center">
+                        <input type="text" name="q" placeholder="Search..." class="border-2 border-gray-300 bg-white h-10 px-5 pr-16 rounded-lg text-sm focus:outline-none">
+                        <button type="submit" class="ml-2 bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                            Search
+                        </button>
+                    </form>
                     {% if user.is_authenticated %}
-                        <span class="py-2 px-2 font-medium text-gray-500">Welcome, {{ user.username }}</span>
+                        <span class="text-navy">Welcome, {{ user.username }}</span>
                         <form method="post" action="{% url 'logout' %}">
                             {% csrf_token %}
-                            <button type="submit" class="py-2 px-2 font-medium text-gray-500 rounded hover:bg-gray-100 hover:text-gray-900">Logout</button>
+                            <button type="submit" class="bg-orange-50 text-navy hover:bg-orange transition-all font-medium rounded-lg text-sm px-5 py-2.5 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange">Logout</button>
                         </form>
                     {% else %}
-                        <a href="{% url 'login' %}" class="py-2 px-2 font-medium text-gray-500 rounded hover:bg-gray-100 hover:text-gray-900">Login</a>
+                        <a href="{% url 'login' %}" class="bg-orange-50 text-navy hover:bg-orange transition-all font-medium rounded-lg text-sm px-5 py-2.5 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange">Login</a>
                     {% endif %}
                 </div>
             </div>
         </div>
     </nav>
-    <div class="max-w-7xl mx-auto mt-6 px-4 sm:px-6 lg:px-8">
+
+    <main class="max-w-7xl mx-auto mt-6 px-4 sm:px-6 lg:px-8">
         {% block content %}{% endblock %}
-    </div>
+    </main>
+
+    <footer class="bg-navy text-white mt-12 py-6">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <p class="text-center">&copy; {% now "Y" %} Vendor Management System. All rights reserved.</p>
+        </div>
+    </footer>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Initialize tooltips
+            tippy('[data-tippy-content]');
+
+            // You can add more global JavaScript here
+        });
+    </script>
 </body>
 </html>
-
 """
 
 ================================================================================
