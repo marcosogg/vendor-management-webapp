@@ -39,7 +39,6 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     "django.contrib.humanize",
     # My apps
-    "tailwind",
     "theme",
     "core",
     "data_import",

@@ -385,7 +385,7 @@ File: core\views.py
 from django.views.generic import ListView, DetailView, TemplateView
 from django.views.generic.edit import CreateView, UpdateView
 from django.db.models import Sum, Count, Q
-from django.urls import reverse_lazy
+from django.urls import reverse_lazy, reverse
 from django.utils.decorators import method_decorator
 from django.views.decorators.cache import cache_page
 from django.contrib.auth.mixins import LoginRequiredMixin
@@ -397,6 +397,7 @@ from .forms import VendorForm
 from .utils import log_error
 from django.db.models import Q
 from django.shortcuts import render
+from django.db.models import Avg
 
 import logging
 import math
@@ -512,9 +513,14 @@ class VendorProfileView(LoginRequiredMixin, DetailView):
         context["parts"] = vendor.parts.all()
         context["spends"] = vendor.spends.all().order_by("-year")
 
-        # Get or create the Risk object for the vendor
+        # Calculate average discount for the vendor
+        avg_discount = vendor.parts.aggregate(Avg("discount"))["discount__avg"]
+        context["avg_discount"] = (
+            round(avg_discount, 2) if avg_discount is not None else 0
+        )
+
         risk, created = Risk.objects.get_or_create(
-            vendor=vendor, defaults={"risk_level": "MEDIUM"}  # Default risk level
+            vendor=vendor, defaults={"risk_level": "MEDIUM"}
         )
         context["risk"] = risk
 
@@ -563,7 +569,7 @@ def global_search(request):
                     "type": "Vendor",
                     "title": vendor.vendor_name,
                     "description": f"Vendor ID: {vendor.vendor_id}",
-                    "url": f"/vendors/{vendor.id}/",  # Adjust this URL as needed
+                    "url": reverse("vendor_profile", kwargs={"pk": vendor.pk}),
                 }
             )
 
@@ -573,7 +579,7 @@ def global_search(request):
                     "type": "Part",
                     "title": part.part_number,
                     "description": f"Vendor: {part.vendor.vendor_name}",
-                    "url": f"/vendors/{part.vendor.id}/",  # Adjust this URL as needed
+                    "url": reverse("vendor_profile", kwargs={"pk": part.vendor.pk}),
                 }
             )
 
@@ -582,8 +588,8 @@ def global_search(request):
                 {
                     "type": "Spend",
                     "title": f"Spend for {spend.vendor.vendor_name}",
-                    "description": f"Year: {spend.year}, Amount: ${spend.usd_amount}",
-                    "url": f"/vendors/{spend.vendor.id}/",  # Adjust this URL as needed
+                    "description": f"Year: {spend.year}, Amount: ${spend.usd_amount:,.2f}",
+                    "url": reverse("vendor_profile", kwargs={"pk": spend.vendor.pk}),
                 }
             )
 
@@ -1002,24 +1008,12 @@ File: core\templates\core\dashboard.html
 ================================================================================
 """
 {% extends 'base.html' %}
+{% load static %}
 {% load humanize %}
 
 {% block title %}Dashboard - Vendor Management{% endblock %}
 
 {% block content %}
-<div id="user-menu"></div>
-
-<script>
-    document.addEventListener('DOMContentLoaded', function () {
-        const userMenu = document.getElementById('user-menu');
-        const menuItems = ['Profile', 'Settings', 'Sign out'];
-
-        ReactDOM.render(
-            React.createElement(Dropdown, { label: 'User Menu', items: menuItems }),
-            userMenu
-        );
-    });
-</script>
 
 <h1 class="text-3xl font-bold mb-6 text-navy dashboard-header">Vendor Management Dashboard</h1>
 
@@ -1091,9 +1085,18 @@ File: core\templates\core\dashboard.html
         </tbody>
     </table>
 </div>
+{% endblock %}
 
+{% block extra_js %}
+<script src="https://unpkg.com/@headlessui/react@1.7.15/dist/headlessui.umd.js"></script>
+<script src="{% static 'js/components.js' %}"></script>
+<script src="https://unpkg.com/react@17/umd/react.production.min.js"></script>
+<script src="https://unpkg.com/react-dom@17/umd/react-dom.production.min.js"></script>
 <script>
     document.addEventListener('DOMContentLoaded', function () {
+        const userMenu = document.getElementById('user-menu');
+        const menuItems = ['Profile', 'Settings', 'Sign out'];
+
         // Chart.js initialization
         var ctx = document.getElementById('topVendorsChart').getContext('2d');
         var chart = new Chart(ctx, {
@@ -1110,8 +1113,8 @@ File: core\templates\core\dashboard.html
         'rgba(75, 192, 192, 0.8)',
         'rgba(153, 102, 255, 0.8)'
     ]
-            }]
-        },
+                }]
+            },
         options: {
         responsive: true,
         scales: {
@@ -1143,7 +1146,7 @@ File: core\templates\core\dashboard.html
             }
         }
     }
-    });
+        });
 
     // Guided Tour
     const tour = new Shepherd.Tour({
@@ -1233,7 +1236,7 @@ File: core\templates\core\dashboard.html
         tour.start();
         localStorage.setItem('tourCompleted', 'true');
     }
-});
+    });
 </script>
 {% endblock %}
 """
@@ -1407,8 +1410,10 @@ File: core\templates\core\search_results.html
     <ul class="divide-y divide-gray-200">
         {% for result in results %}
         <li class="py-4">
-            <h3 class="text-lg font-medium text-gray-900">{{ result.title }} <span class="text-sm text-gray-500">({{
-                    result.type }})</span></h3>
+            <h3 class="text-lg font-medium text-gray-900">
+                {{ result.title }} 
+                <span class="text-sm text-gray-500">({{ result.type }})</span>
+            </h3>
             <p class="mt-1 text-sm text-gray-600">{{ result.description }}</p>
             <a href="{{ result.url }}" class="mt-2 text-sm text-blue-600 hover:underline">View details</a>
         </li>
@@ -1721,7 +1726,8 @@ File: core\templates\core\vendor_profile.html
     <div class="bg-white shadow-md rounded-lg p-6">
         <h2 class="text-xl font-semibold mb-4">Risk Assessment</h2>
         {% if risk %}
-        <p class="p-4 rounded-md {% if risk.risk_level == 'LOW' %}bg-green-100 text-green-800{% elif risk.risk_level == 'MEDIUM' %}bg-yellow-100 text-yellow-800{% else %}bg-red-100 text-red-800{% endif %}">
+        <p
+            class="p-4 rounded-md {% if risk.risk_level == 'LOW' %}bg-green-100 text-green-800{% elif risk.risk_level == 'MEDIUM' %}bg-yellow-100 text-yellow-800{% else %}bg-red-100 text-red-800{% endif %}">
             Risk Level: {{ risk.get_risk_level_display }}
             {% if risk.risk_level == "MEDIUM" %}
             <br><small>(This is a default risk level and will be updated in the future.)</small>
@@ -1737,13 +1743,19 @@ File: core\templates\core\vendor_profile.html
     <div class="bg-white shadow-md rounded-lg p-6">
         <h2 class="text-xl font-semibold mb-4">Parts</h2>
         {% if parts %}
+        <div class="mb-4">
+            <p class="text-lg font-semibold">Average Discount: {{ avg_discount }}%</p>
+        </div>
         <div class="overflow-x-auto">
             <table class="w-full">
                 <thead class="bg-gray-50">
                     <tr>
-                        <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Part Number</th>
-                        <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Buyer</th>
-                        <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Discount</th>
+                        <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Part
+                            Number</th>
+                        <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Buyer
+                        </th>
+                        <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Discount</th>
                     </tr>
                 </thead>
                 <tbody class="bg-white divide-y divide-gray-200">
@@ -1768,8 +1780,10 @@ File: core\templates\core\vendor_profile.html
             <table class="w-full">
                 <thead class="bg-gray-50">
                     <tr>
-                        <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Year</th>
-                        <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
+                        <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Year
+                        </th>
+                        <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Amount</th>
                     </tr>
                 </thead>
                 <tbody class="bg-white divide-y divide-gray-200">
@@ -1803,13 +1817,13 @@ File: core\templates\core\vendor_profile.html
 <script>
     // Prepare data for charts
     var spendData = {
-        labels: [{% for spend in spends %}{{ spend.year }}{% if not forloop.last %}, {% endif %}{% endfor %}],
-        data: [{% for spend in spends %}{{ spend.usd_amount }}{% if not forloop.last %}, {% endif %}{% endfor %}]
+        labels: [{% for spend in spends %}{{ spend.year }}{% if not forloop.last %}, {% endif %} {% endfor %}],
+    data: [{% for spend in spends %}{ { spend.usd_amount } } {% if not forloop.last %}, {% endif %} {% endfor %}]
     };
 
     var partsData = {
-        labels: [{% for part in parts %}'{{ part.part_number }}',{% endfor %}],
-        data: [{% for part in parts %}1,{% endfor %}]
+        labels: [{% for part in parts %}'{{ part.part_number }}', {% endfor %}],
+    data: [{% for part in parts %}1, {% endfor %}]
     };
 
     // Spend History Chart
@@ -1867,7 +1881,6 @@ File: core\templates\core\vendor_profile.html
     });
 </script>
 {% endblock %}
-
 """
 
 ================================================================================
@@ -2310,11 +2323,9 @@ File: templates\base.html
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="shortcut icon" type="image/x-icon" href="{% static 'favicon.ico' %}">
     <title>{% block title %}Vendor Management System{% endblock %}</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://unpkg.com/react@17/umd/react.production.min.js"></script>
-    <script src="https://unpkg.com/react-dom@17/umd/react-dom.production.min.js"></script>
-    <script src="https://unpkg.com/@headlessui/react@1.7.15/dist/index.umd.js"></script>
     <script>
         tailwind.config = {
             theme: {
@@ -2449,6 +2460,7 @@ File: templates\base.html
         });
     </script>
     <script src="{% static 'js/components.js' %}"></script>
+    {% block extra_js %}{% endblock %}
 </body>
 
 </html>
@@ -2554,7 +2566,6 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     "django.contrib.humanize",
     # My apps
-    "tailwind",
     "theme",
     "core",
     "data_import",

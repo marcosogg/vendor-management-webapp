@@ -119,23 +119,26 @@
         <canvas id="partsChart"></canvas>
     </div>
 </div>
+{% endblock %}
 
+{% block extra_js %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
-    // Prepare data for charts
-    var spendData = {
-        labels: [{% for spend in spends %}{{ spend.year }}{% if not forloop.last %}, {% endif %} {% endfor %}],
-    data: [{% for spend in spends %}{ { spend.usd_amount } } {% if not forloop.last %}, {% endif %} {% endfor %}]
+    document.addEventListener('DOMContentLoaded', function () {
+        // Prepare data for charts
+        var spendData = {
+            labels: [{% for spend in spends %}"{{ spend.year }}"{% if not forloop.last %}, {% endif %} {% endfor %}],
+        data: [{% for spend in spends %}{{ spend.usd_amount }}{% if not forloop.last %}, {% endif %} {% endfor %}]
     };
 
     var partsData = {
-        labels: [{% for part in parts %}'{{ part.part_number }}', {% endfor %}],
-    data: [{% for part in parts %}1, {% endfor %}]
+        labels: [{% for part in parts %}"{{ part.part_number }}"{% if not forloop.last %}, {% endif %} {% endfor %}],
+    data: [{% for part in parts %}1{% if not forloop.last %}, {% endif %} {% endfor %}]
     };
 
     // Spend History Chart
     var spendCtx = document.getElementById('spendChart').getContext('2d');
-    var spendChart = new Chart(spendCtx, {
+    new Chart(spendCtx, {
         type: 'line',
         data: {
             labels: spendData.labels,
@@ -162,7 +165,7 @@
 
     // Parts Distribution Chart
     var partsCtx = document.getElementById('partsChart').getContext('2d');
-    var partsChart = new Chart(partsCtx, {
+    new Chart(partsCtx, {
         type: 'pie',
         data: {
             labels: partsData.labels,
@@ -186,5 +189,6 @@
             }
         }
     });
+});
 </script>
 {% endblock %}

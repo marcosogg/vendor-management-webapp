@@ -12,8 +12,10 @@
     <ul class="divide-y divide-gray-200">
         {% for result in results %}
         <li class="py-4">
-            <h3 class="text-lg font-medium text-gray-900">{{ result.title }} <span class="text-sm text-gray-500">({{
-                    result.type }})</span></h3>
+            <h3 class="text-lg font-medium text-gray-900">
+                {{ result.title }} 
+                <span class="text-sm text-gray-500">({{ result.type }})</span>
+            </h3>
             <p class="mt-1 text-sm text-gray-600">{{ result.description }}</p>
             <a href="{{ result.url }}" class="mt-2 text-sm text-blue-600 hover:underline">View details</a>
         </li>

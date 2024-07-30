@@ -1,7 +1,7 @@
 from django.views.generic import ListView, DetailView, TemplateView
 from django.views.generic.edit import CreateView, UpdateView
 from django.db.models import Sum, Count, Q
-from django.urls import reverse_lazy
+from django.urls import reverse_lazy, reverse
 from django.utils.decorators import method_decorator
 from django.views.decorators.cache import cache_page
 from django.contrib.auth.mixins import LoginRequiredMixin
@@ -185,7 +185,7 @@ def global_search(request):
                     "type": "Vendor",
                     "title": vendor.vendor_name,
                     "description": f"Vendor ID: {vendor.vendor_id}",
-                    "url": f"/vendors/{vendor.id}/",  # Adjust this URL as needed
+                    "url": reverse("vendor_profile", kwargs={"pk": vendor.pk}),
                 }
             )
 
@@ -195,7 +195,7 @@ def global_search(request):
                     "type": "Part",
                     "title": part.part_number,
                     "description": f"Vendor: {part.vendor.vendor_name}",
-                    "url": f"/vendors/{part.vendor.id}/",  # Adjust this URL as needed
+                    "url": reverse("vendor_profile", kwargs={"pk": part.vendor.pk}),
                 }
             )
 
@@ -204,8 +204,8 @@ def global_search(request):
                 {
                     "type": "Spend",
                     "title": f"Spend for {spend.vendor.vendor_name}",
-                    "description": f"Year: {spend.year}, Amount: ${spend.usd_amount}",
-                    "url": f"/vendors/{spend.vendor.id}/",  # Adjust this URL as needed
+                    "description": f"Year: {spend.year}, Amount: ${spend.usd_amount:,.2f}",
+                    "url": reverse("vendor_profile", kwargs={"pk": spend.vendor.pk}),
                 }
             )
 
