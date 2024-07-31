@@ -61,10 +61,29 @@ class Spend(models.Model):
 class Risk(models.Model):
     vendor = models.OneToOneField(Vendor, on_delete=models.CASCADE, related_name="risk")
     risk_level = models.CharField(
-        max_length=50, choices=[("LOW", "Low"), ("MEDIUM", "Medium"), ("HIGH", "High")]
+        max_length=50,
+        choices=[("LOW", "Low"), ("MEDIUM", "Medium"), ("HIGH", "High")],
+        default="MEDIUM",
     )
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
+    total_score = models.IntegerField(
+        validators=[MinValueValidator(0), MaxValueValidator(100)], default=0
+    )
+    payment_terms_score = models.IntegerField(
+        validators=[MinValueValidator(0), MaxValueValidator(35)], default=0
+    )
+    spend_score = models.IntegerField(
+        validators=[MinValueValidator(0), MaxValueValidator(25)], default=0
+    )
+    average_discount_score = models.IntegerField(
+        validators=[MinValueValidator(0), MaxValueValidator(15)], default=0
+    )
+    contract_score = models.IntegerField(
+        validators=[MinValueValidator(0), MaxValueValidator(15)], default=0
+    )
+    relationship_type_score = models.IntegerField(
+        validators=[MinValueValidator(0), MaxValueValidator(10)], default=0
+    )
+    last_updated = models.DateTimeField(auto_now=True)
 
     def __str__(self):
         return f"{self.vendor.vendor_name} - Risk: {self.get_risk_level_display()}"

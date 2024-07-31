@@ -1,10 +1,9 @@
-# data_import/import_handlers.py
-
 import pandas as pd
 from django.db import transaction
 from core.models import Vendor, Part, Spend, Risk
 from .models import DiscountImport, SpendImport, VendorImport
 from django.db import IntegrityError
+from core.risk_assessment import update_vendor_risk
 
 
 @transaction.atomic
@@ -17,7 +16,6 @@ def handle_uploaded_file(file, import_type):
                 "Unsupported file format. Please upload an Excel file (.xlsx)."
             )
 
-        # Print column names and first few rows for debugging
         print(f"Columns in the uploaded file: {df.columns.tolist()}")
         print(f"First few rows of the data:\n{df.head()}")
 
@@ -42,7 +40,6 @@ def import_discount(df):
             part_number=row["part_number"], discount=row["discount"]
         )
 
-    # Update Part model with discount information
     for discount_import in DiscountImport.objects.all():
         Part.objects.filter(part_number=discount_import.part_number).update(
             discount=discount_import.discount
@@ -64,7 +61,6 @@ def import_spend(df):
             vendor_id=row["vendor_id"], usd_amount=row["usd_amount"], year=row["year"]
         )
 
-    # Create or update Spend entries
     for spend_import in SpendImport.objects.all():
         vendor = Vendor.objects.filter(vendor_id=spend_import.vendor_id).first()
         if vendor:
@@ -82,15 +78,15 @@ def import_spend(df):
                     print(
                         f"Updated existing Spend entry for vendor {vendor.vendor_name} in year {spend_import.year}"
                     )
+
+                # Update risk assessment after spend import
+                update_vendor_risk(vendor)
             except IntegrityError as e:
                 print(f"Error creating/updating Spend entry: {str(e)}")
         else:
             print(f"Warning: No vendor found with ID {spend_import.vendor_id}")
 
     SpendImport.objects.all().delete()
-
-
-# data_import/import_handlers.py
 
 
 @transaction.atomic
@@ -123,7 +119,6 @@ def import_vendors(df):
             relationship_type=row["relationship_type"],
         )
 
-    # Create Vendor and Part entries
     for vendor_import in VendorImport.objects.all():
         vendor, _ = Vendor.objects.update_or_create(
             vendor_id=vendor_import.vendor_id,
@@ -136,11 +131,6 @@ def import_vendors(df):
             },
         )
 
-        # Create or update the Risk object for the vendor
-        Risk.objects.update_or_create(
-            vendor=vendor, defaults={"risk_level": "MEDIUM"}  # Default risk level
-        )
-
         Part.objects.update_or_create(
             part_number=vendor_import.part_number,
             defaults={
@@ -149,5 +139,8 @@ def import_vendors(df):
                 "discount": 0,  # Default value, will be updated by discount import
             },
         )
+
+        # Update risk assessment
+        update_vendor_risk(vendor)
 
     VendorImport.objects.all().delete()

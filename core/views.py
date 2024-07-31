@@ -1,6 +1,6 @@
 from django.views.generic import ListView, DetailView, TemplateView
 from django.views.generic.edit import CreateView, UpdateView
-from django.db.models import Sum, Count, Q
+from django.db.models import Sum, Count, Q, Avg
 from django.urls import reverse_lazy, reverse
 from django.utils.decorators import method_decorator
 from django.views.decorators.cache import cache_page
@@ -8,17 +8,15 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.decorators import login_required
 from django.utils.html import escape
 from django.core.exceptions import ValidationError
+from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
+from django.shortcuts import render
+from django.contrib import messages
 from .models import Vendor, Part, Spend, Risk, Activity
 from .forms import VendorForm
 from .utils import log_error
-from django.db.models import Q
-from django.shortcuts import render
-from django.db.models import Avg
 
 import logging
 import math
-from django.db.models import Q
-from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 
 logger = logging.getLogger(__name__)
 
@@ -68,14 +66,12 @@ class VendorListView(LoginRequiredMixin, ListView):
     def get_queryset(self):
         queryset = super().get_queryset().select_related("risk")
 
-        # Sorting
         sort_by = self.request.GET.get("sort_by", "vendor_name")
         sort_order = self.request.GET.get("sort_order", "asc")
         if sort_order == "desc":
             sort_by = f"-{sort_by}"
         queryset = queryset.order_by(sort_by)
 
-        # Filtering
         search_query = self.request.GET.get("search", "")
         relationship_type = self.request.GET.get("relationship_type", "")
         risk_level = self.request.GET.get("risk_level", "")
@@ -129,16 +125,18 @@ class VendorProfileView(LoginRequiredMixin, DetailView):
         context["parts"] = vendor.parts.all()
         context["spends"] = vendor.spends.all().order_by("-year")
 
-        # Calculate average discount for the vendor
         avg_discount = vendor.parts.aggregate(Avg("discount"))["discount__avg"]
         context["avg_discount"] = (
             round(avg_discount, 2) if avg_discount is not None else 0
         )
 
-        risk, created = Risk.objects.get_or_create(
-            vendor=vendor, defaults={"risk_level": "MEDIUM"}
-        )
-        context["risk"] = risk
+        context["risk"] = vendor.risk
+
+        if vendor.risk.risk_level == "HIGH":
+            messages.warning(
+                self.request,
+                f"Warning: {vendor.vendor_name} is classified as a high-risk vendor.",
+            )
 
         return context
 

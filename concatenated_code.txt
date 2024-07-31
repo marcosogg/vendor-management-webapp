@@ -8,6 +8,7 @@ Directory structure of included files:
             └── forms.py
             └── import_models.py
             └── models.py
+            └── risk_assessment.py
             └── tests.py
             └── urls.py
             └── utils.py
@@ -18,11 +19,13 @@ Directory structure of included files:
                     └── clear_db.py
                     └── describe_models.py
                     └── populate_db.py
+                    └── recalculate_risks.py
                     └── __pycache__/
             └── migrations/
                 └── 0001_initial.py
                 └── 0002_part_created_at_part_updated_at_risk_created_at_and_more.py
                 └── 0003_alter_vendor_relationship_type_activity.py
+                └── 0004_rename_updated_at_risk_last_updated_and_more.py
                 └── __init__.py
                 └── __pycache__/
             └── templates/
@@ -259,10 +262,29 @@ class Spend(models.Model):
 class Risk(models.Model):
     vendor = models.OneToOneField(Vendor, on_delete=models.CASCADE, related_name="risk")
     risk_level = models.CharField(
-        max_length=50, choices=[("LOW", "Low"), ("MEDIUM", "Medium"), ("HIGH", "High")]
+        max_length=50,
+        choices=[("LOW", "Low"), ("MEDIUM", "Medium"), ("HIGH", "High")],
+        default="MEDIUM",
     )
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
+    total_score = models.IntegerField(
+        validators=[MinValueValidator(0), MaxValueValidator(100)], default=0
+    )
+    payment_terms_score = models.IntegerField(
+        validators=[MinValueValidator(0), MaxValueValidator(35)], default=0
+    )
+    spend_score = models.IntegerField(
+        validators=[MinValueValidator(0), MaxValueValidator(25)], default=0
+    )
+    average_discount_score = models.IntegerField(
+        validators=[MinValueValidator(0), MaxValueValidator(15)], default=0
+    )
+    contract_score = models.IntegerField(
+        validators=[MinValueValidator(0), MaxValueValidator(15)], default=0
+    )
+    relationship_type_score = models.IntegerField(
+        validators=[MinValueValidator(0), MaxValueValidator(10)], default=0
+    )
+    last_updated = models.DateTimeField(auto_now=True)
 
     def __str__(self):
         return f"{self.vendor.vendor_name} - Risk: {self.get_risk_level_display()}"
@@ -276,6 +298,98 @@ class Activity(models.Model):
 
     class Meta:
         ordering = ["-date"]
+
+"""
+
+================================================================================
+File: core\risk_assessment.py
+================================================================================
+"""
+from core import models
+from django.db.models import Sum, Avg
+from core.models import Vendor, Risk, Spend, Part
+
+
+def calculate_risk_score(vendor):
+    payment_terms_score = calculate_payment_terms_score(vendor.payment_terms)
+    spend_score = calculate_spend_score(vendor)
+    average_discount_score = calculate_average_discount_score(vendor)
+    contract_score = calculate_contract_score(vendor.contract_year)
+    relationship_type_score = calculate_relationship_type_score(
+        vendor.relationship_type
+    )
+
+    total_score = (
+        payment_terms_score
+        + spend_score
+        + average_discount_score
+        + contract_score
+        + relationship_type_score
+    )
+
+    risk_level = get_risk_level(total_score)
+
+    return {
+        "risk_level": risk_level,
+        "total_score": total_score,
+        "payment_terms_score": payment_terms_score,
+        "spend_score": spend_score,
+        "average_discount_score": average_discount_score,
+        "contract_score": contract_score,
+        "relationship_type_score": relationship_type_score,
+    }
+
+
+def calculate_payment_terms_score(payment_terms):
+    if payment_terms == "PPAY":
+        return 0
+    elif payment_terms.startswith("Net "):
+        days = int(payment_terms.split()[1])
+        return 35 if days >= 30 else 5
+    else:
+        return 5  # Default to low score for unknown terms
+
+
+def calculate_spend_score(vendor):
+    SPEND_THRESHOLD = 1000000  # Example threshold, adjust as needed
+    total_spend = (
+        Spend.objects.filter(vendor=vendor).aggregate(Sum("usd_amount"))[
+            "usd_amount__sum"
+        ]
+        or 0
+    )
+    return 25 if total_spend > SPEND_THRESHOLD else 0
+
+
+def calculate_average_discount_score(vendor):
+    avg_discount = (
+        Part.objects.filter(vendor=vendor).aggregate(Avg("discount"))["discount__avg"]
+        or 0
+    )
+    return 15 if avg_discount > 0 else 0
+
+
+def calculate_contract_score(contract_year):
+    return 15 if contract_year else 0
+
+
+def calculate_relationship_type_score(relationship_type):
+    return 10 if relationship_type == "DIRECT" else 0
+
+
+def get_risk_level(total_score):
+    if total_score <= 30:
+        return "LOW"
+    elif total_score <= 70:
+        return "MEDIUM"
+    else:
+        return "HIGH"
+
+
+def update_vendor_risk(vendor):
+    risk_data = calculate_risk_score(vendor)
+    risk, created = Risk.objects.update_or_create(vendor=vendor, defaults=risk_data)
+    return risk
 
 """
 
@@ -384,7 +498,7 @@ File: core\views.py
 """
 from django.views.generic import ListView, DetailView, TemplateView
 from django.views.generic.edit import CreateView, UpdateView
-from django.db.models import Sum, Count, Q
+from django.db.models import Sum, Count, Q, Avg
 from django.urls import reverse_lazy, reverse
 from django.utils.decorators import method_decorator
 from django.views.decorators.cache import cache_page
@@ -392,17 +506,15 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.decorators import login_required
 from django.utils.html import escape
 from django.core.exceptions import ValidationError
+from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
+from django.shortcuts import render
+from django.contrib import messages
 from .models import Vendor, Part, Spend, Risk, Activity
 from .forms import VendorForm
 from .utils import log_error
-from django.db.models import Q
-from django.shortcuts import render
-from django.db.models import Avg
 
 import logging
 import math
-from django.db.models import Q
-from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 
 logger = logging.getLogger(__name__)
 
@@ -452,14 +564,12 @@ class VendorListView(LoginRequiredMixin, ListView):
     def get_queryset(self):
         queryset = super().get_queryset().select_related("risk")
 
-        # Sorting
         sort_by = self.request.GET.get("sort_by", "vendor_name")
         sort_order = self.request.GET.get("sort_order", "asc")
         if sort_order == "desc":
             sort_by = f"-{sort_by}"
         queryset = queryset.order_by(sort_by)
 
-        # Filtering
         search_query = self.request.GET.get("search", "")
         relationship_type = self.request.GET.get("relationship_type", "")
         risk_level = self.request.GET.get("risk_level", "")
@@ -513,16 +623,18 @@ class VendorProfileView(LoginRequiredMixin, DetailView):
         context["parts"] = vendor.parts.all()
         context["spends"] = vendor.spends.all().order_by("-year")
 
-        # Calculate average discount for the vendor
         avg_discount = vendor.parts.aggregate(Avg("discount"))["discount__avg"]
         context["avg_discount"] = (
             round(avg_discount, 2) if avg_discount is not None else 0
         )
 
-        risk, created = Risk.objects.get_or_create(
-            vendor=vendor, defaults={"risk_level": "MEDIUM"}
-        )
-        context["risk"] = risk
+        context["risk"] = vendor.risk
+
+        if vendor.risk.risk_level == "HIGH":
+            messages.warning(
+                self.request,
+                f"Warning: {vendor.vendor_name} is classified as a high-risk vendor.",
+            )
 
         return context
 
@@ -791,6 +903,36 @@ class Command(BaseCommand):
 """
 
 ================================================================================
+File: core\management\commands\recalculate_risks.py
+================================================================================
+"""
+from django.core.management.base import BaseCommand
+from core.models import Vendor
+from core.risk_assessment import update_vendor_risk
+
+
+class Command(BaseCommand):
+    help = "Recalculates risk for all vendors"
+
+    def handle(self, *args, **options):
+        vendors = Vendor.objects.all()
+        total = vendors.count()
+
+        self.stdout.write(f"Recalculating risks for {total} vendors...")
+
+        for i, vendor in enumerate(vendors, 1):
+            risk = update_vendor_risk(vendor)
+            self.stdout.write(
+                f"[{i}/{total}] Updated risk for {vendor.vendor_name}: {risk.risk_level}"
+            )
+
+        self.stdout.write(
+            self.style.SUCCESS("Risk recalculation completed successfully.")
+        )
+
+"""
+
+================================================================================
 File: core\migrations\0001_initial.py
 ================================================================================
 """
@@ -991,6 +1133,71 @@ class Migration(migrations.Migration):
             options={
                 'ordering': ['-date'],
             },
+        ),
+    ]
+
+"""
+
+================================================================================
+File: core\migrations\0004_rename_updated_at_risk_last_updated_and_more.py
+================================================================================
+"""
+# Generated by Django 5.0.7 on 2024-07-31 10:46
+
+import django.core.validators
+from django.db import migrations, models
+
+
+class Migration(migrations.Migration):
+
+    dependencies = [
+        ('core', '0003_alter_vendor_relationship_type_activity'),
+    ]
+
+    operations = [
+        migrations.RenameField(
+            model_name='risk',
+            old_name='updated_at',
+            new_name='last_updated',
+        ),
+        migrations.RemoveField(
+            model_name='risk',
+            name='created_at',
+        ),
+        migrations.AddField(
+            model_name='risk',
+            name='average_discount_score',
+            field=models.IntegerField(default=0, validators=[django.core.validators.MinValueValidator(0), django.core.validators.MaxValueValidator(15)]),
+        ),
+        migrations.AddField(
+            model_name='risk',
+            name='contract_score',
+            field=models.IntegerField(default=0, validators=[django.core.validators.MinValueValidator(0), django.core.validators.MaxValueValidator(15)]),
+        ),
+        migrations.AddField(
+            model_name='risk',
+            name='payment_terms_score',
+            field=models.IntegerField(default=0, validators=[django.core.validators.MinValueValidator(0), django.core.validators.MaxValueValidator(35)]),
+        ),
+        migrations.AddField(
+            model_name='risk',
+            name='relationship_type_score',
+            field=models.IntegerField(default=0, validators=[django.core.validators.MinValueValidator(0), django.core.validators.MaxValueValidator(10)]),
+        ),
+        migrations.AddField(
+            model_name='risk',
+            name='spend_score',
+            field=models.IntegerField(default=0, validators=[django.core.validators.MinValueValidator(0), django.core.validators.MaxValueValidator(25)]),
+        ),
+        migrations.AddField(
+            model_name='risk',
+            name='total_score',
+            field=models.IntegerField(default=0, validators=[django.core.validators.MinValueValidator(0), django.core.validators.MaxValueValidator(100)]),
+        ),
+        migrations.AlterField(
+            model_name='risk',
+            name='risk_level',
+            field=models.CharField(choices=[('LOW', 'Low'), ('MEDIUM', 'Medium'), ('HIGH', 'High')], default='MEDIUM', max_length=50),
         ),
     ]
 
@@ -1688,124 +1895,137 @@ File: core\templates\core\vendor_profile.html
 ================================================================================
 """
 {% extends 'base.html' %}
+{% load static %}
 
 {% block title %}{{ vendor.vendor_name }} - Vendor Profile{% endblock %}
 
 {% block content %}
-<h1 class="text-3xl font-bold mb-6">{{ vendor.vendor_name }}</h1>
-<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-    <div class="bg-white shadow-md rounded-lg p-6">
-        <h2 class="text-xl font-semibold mb-4">Vendor Details</h2>
-        <table class="w-full">
-            <tr>
-                <th class="text-left py-2">Vendor ID:</th>
-                <td>{{ vendor.vendor_id }}</td>
-            </tr>
-            <tr>
-                <th class="text-left py-2">Payment Terms:</th>
-                <td>{{ vendor.payment_terms }}</td>
-            </tr>
-            <tr>
-                <th class="text-left py-2">Credit Limit:</th>
-                <td>${{ vendor.credit_limit|floatformat:2 }}</td>
-            </tr>
-            <tr>
-                <th class="text-left py-2">Contract Year:</th>
-                <td>{{ vendor.contract_year }}</td>
-            </tr>
-            <tr>
-                <th class="text-left py-2">Relationship Type:</th>
-                <td>{{ vendor.get_relationship_type_display }}</td>
-            </tr>
-        </table>
-    </div>
-    <div class="bg-white shadow-md rounded-lg p-6">
-        <h2 class="text-xl font-semibold mb-4">Risk Assessment</h2>
-        {% if risk %}
-        <p
-            class="p-4 rounded-md {% if risk.risk_level == 'LOW' %}bg-green-100 text-green-800{% elif risk.risk_level == 'MEDIUM' %}bg-yellow-100 text-yellow-800{% else %}bg-red-100 text-red-800{% endif %}">
-            Risk Level: {{ risk.get_risk_level_display }}
-            {% if risk.risk_level == "MEDIUM" %}
-            <br><small>(This is a default risk level and will be updated in the future.)</small>
-            {% endif %}
-        </p>
-        {% else %}
-        <p class="p-4 bg-yellow-100 text-yellow-800 rounded-md">No risk assessment available for this vendor.</p>
-        {% endif %}
-    </div>
-</div>
+<div class="container mx-auto px-4 py-8">
+    <h1 class="text-3xl font-bold mb-6 text-navy">{{ vendor.vendor_name }}</h1>
 
-<div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
-    <div class="bg-white shadow-md rounded-lg p-6">
-        <h2 class="text-xl font-semibold mb-4">Parts</h2>
-        {% if parts %}
-        <div class="mb-4">
-            <p class="text-lg font-semibold">Average Discount: {{ avg_discount }}%</p>
-        </div>
-        <div class="overflow-x-auto">
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <!-- Vendor Details Card -->
+        <div class="bg-white shadow-md rounded-lg p-6">
+            <h2 class="text-xl font-semibold mb-4 text-navy">Vendor Details</h2>
             <table class="w-full">
-                <thead class="bg-gray-50">
-                    <tr>
-                        <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Part
-                            Number</th>
-                        <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Buyer
-                        </th>
-                        <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            Discount</th>
-                    </tr>
-                </thead>
-                <tbody class="bg-white divide-y divide-gray-200">
-                    {% for part in parts %}
-                    <tr>
-                        <td class="px-4 py-2 whitespace-nowrap">{{ part.part_number }}</td>
-                        <td class="px-4 py-2 whitespace-nowrap">{{ part.buyer }}</td>
-                        <td class="px-4 py-2 whitespace-nowrap">{{ part.discount }}%</td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
+                <tr>
+                    <th class="text-left py-2 text-gray-600">Vendor ID:</th>
+                    <td class="py-2">{{ vendor.vendor_id }}</td>
+                </tr>
+                <tr>
+                    <th class="text-left py-2 text-gray-600">Payment Terms:</th>
+                    <td class="py-2">{{ vendor.payment_terms }}</td>
+                </tr>
+                <tr>
+                    <th class="text-left py-2 text-gray-600">Credit Limit:</th>
+                    <td class="py-2">${{ vendor.credit_limit|floatformat:2 }}</td>
+                </tr>
+                <tr>
+                    <th class="text-left py-2 text-gray-600">Contract Year:</th>
+                    <td class="py-2">{{ vendor.contract_year }}</td>
+                </tr>
+                <tr>
+                    <th class="text-left py-2 text-gray-600">Relationship Type:</th>
+                    <td class="py-2">{{ vendor.get_relationship_type_display }}</td>
+                </tr>
             </table>
         </div>
-        {% else %}
-        <p class="text-gray-500">No parts found for this vendor.</p>
-        {% endif %}
-    </div>
-    <div class="bg-white shadow-md rounded-lg p-6">
-        <h2 class="text-xl font-semibold mb-4">Spend History</h2>
-        {% if spends %}
-        <div class="overflow-x-auto">
-            <table class="w-full">
-                <thead class="bg-gray-50">
-                    <tr>
-                        <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Year
-                        </th>
-                        <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            Amount</th>
-                    </tr>
-                </thead>
-                <tbody class="bg-white divide-y divide-gray-200">
-                    {% for spend in spends %}
-                    <tr>
-                        <td class="px-4 py-2 whitespace-nowrap">{{ spend.year }}</td>
-                        <td class="px-4 py-2 whitespace-nowrap">${{ spend.usd_amount|floatformat:2 }}</td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-        {% else %}
-        <p class="text-gray-500">No spend history found for this vendor.</p>
-        {% endif %}
-    </div>
-</div>
 
-<div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
-    <div class="bg-white shadow-md rounded-lg p-6">
-        <h2 class="text-xl font-semibold mb-4">Spend History Chart</h2>
-        <canvas id="spendChart"></canvas>
-    </div>
-    <div class="bg-white shadow-md rounded-lg p-6">
-        <h2 class="text-xl font-semibold mb-4">Parts Distribution</h2>
-        <canvas id="partsChart"></canvas>
+        <!-- Risk Assessment Card -->
+        <div class="bg-white shadow-md rounded-lg p-6">
+            <h2 class="text-xl font-semibold mb-4 text-navy">Risk Assessment</h2>
+            <p class="mb-2">Risk Level:
+                <span class="font-bold {% if risk.risk_level == 'HIGH' %}text-red-600
+                                      {% elif risk.risk_level == 'MEDIUM' %}text-yellow-600
+                                      {% else %}text-green-600{% endif %}">
+                    {{ risk.get_risk_level_display }}
+                </span>
+            </p>
+            <p class="mb-2">Total Score: {{ risk.total_score }}</p>
+            <h3 class="text-lg font-semibold mt-4 mb-2">Score Breakdown:</h3>
+            <ul class="list-disc list-inside">
+                <li>Payment Terms: {{ risk.payment_terms_score }} / 35</li>
+                <li>Spend: {{ risk.spend_score }} / 25</li>
+                <li>Average Discount: {{ risk.average_discount_score }} / 15</li>
+                <li>Contract: {{ risk.contract_score }} / 15</li>
+                <li>Relationship Type: {{ risk.relationship_type_score }} / 10</li>
+            </ul>
+            <p class="text-sm text-gray-500 mt-4">Last updated: {{ risk.last_updated|date:"F d, Y H:i" }}</p>
+        </div>
+
+        <!-- Parts Card -->
+        <div class="bg-white shadow-md rounded-lg p-6">
+            <h2 class="text-xl font-semibold mb-4 text-navy">Parts</h2>
+            <p class="mb-4">Average Discount: {{ avg_discount|floatformat:2 }}%</p>
+            <div class="overflow-x-auto max-h-64">
+                <table class="min-w-full">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Part Number</th>
+                            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Buyer</th>
+                            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Discount</th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white divide-y divide-gray-200">
+                        {% for part in parts %}
+                        <tr>
+                            <td class="px-4 py-2 whitespace-nowrap">{{ part.part_number }}</td>
+                            <td class="px-4 py-2 whitespace-nowrap">{{ part.buyer }}</td>
+                            <td class="px-4 py-2 whitespace-nowrap">{{ part.discount }}%</td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="3" class="px-4 py-2 text-center">No parts found for this vendor.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Spend History Card -->
+        <div class="bg-white shadow-md rounded-lg p-6">
+            <h2 class="text-xl font-semibold mb-4 text-navy">Spend History</h2>
+            <div class="overflow-x-auto">
+                <table class="min-w-full">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Year</th>
+                            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Amount</th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white divide-y divide-gray-200">
+                        {% for spend in spends %}
+                        <tr>
+                            <td class="px-4 py-2 whitespace-nowrap">{{ spend.year }}</td>
+                            <td class="px-4 py-2 whitespace-nowrap">${{ spend.usd_amount|floatformat:2 }}</td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="2" class="px-4 py-2 text-center">No spend history found for this vendor.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Spend History Chart -->
+        <div class="bg-white shadow-md rounded-lg p-6">
+            <h2 class="text-xl font-semibold mb-4 text-navy">Spend History Chart</h2>
+            <canvas id="spendChart"></canvas>
+        </div>
+
+        <!-- Parts Distribution -->
+        <div class="bg-white shadow-md rounded-lg p-6">
+            <h2 class="text-xl font-semibold mb-4 text-navy">Parts Distribution</h2>
+            <canvas id="partsChart"></canvas>
+        </div>
     </div>
 </div>
 {% endblock %}
@@ -1818,12 +2038,12 @@ File: core\templates\core\vendor_profile.html
         var spendData = {
             labels: [{% for spend in spends %}"{{ spend.year }}"{% if not forloop.last %}, {% endif %} {% endfor %}],
         data: [{% for spend in spends %}{{ spend.usd_amount }}{% if not forloop.last %}, {% endif %} {% endfor %}]
-    };
+        };
 
     var partsData = {
         labels: [{% for part in parts %}"{{ part.part_number }}"{% if not forloop.last %}, {% endif %} {% endfor %}],
     data: [{% for part in parts %}1{% if not forloop.last %}, {% endif %} {% endfor %}]
-    };
+        };
 
     // Spend History Chart
     var spendCtx = document.getElementById('spendChart').getContext('2d');
@@ -1878,7 +2098,7 @@ File: core\templates\core\vendor_profile.html
             }
         }
     });
-});
+    });
 </script>
 {% endblock %}
 """
@@ -1941,13 +2161,12 @@ class FileUploadForm(forms.Form):
 File: data_import\import_handlers.py
 ================================================================================
 """
-# data_import/import_handlers.py
-
 import pandas as pd
 from django.db import transaction
 from core.models import Vendor, Part, Spend, Risk
 from .models import DiscountImport, SpendImport, VendorImport
 from django.db import IntegrityError
+from core.risk_assessment import update_vendor_risk
 
 
 @transaction.atomic
@@ -1960,7 +2179,6 @@ def handle_uploaded_file(file, import_type):
                 "Unsupported file format. Please upload an Excel file (.xlsx)."
             )
 
-        # Print column names and first few rows for debugging
         print(f"Columns in the uploaded file: {df.columns.tolist()}")
         print(f"First few rows of the data:\n{df.head()}")
 
@@ -1985,7 +2203,6 @@ def import_discount(df):
             part_number=row["part_number"], discount=row["discount"]
         )
 
-    # Update Part model with discount information
     for discount_import in DiscountImport.objects.all():
         Part.objects.filter(part_number=discount_import.part_number).update(
             discount=discount_import.discount
@@ -2007,7 +2224,6 @@ def import_spend(df):
             vendor_id=row["vendor_id"], usd_amount=row["usd_amount"], year=row["year"]
         )
 
-    # Create or update Spend entries
     for spend_import in SpendImport.objects.all():
         vendor = Vendor.objects.filter(vendor_id=spend_import.vendor_id).first()
         if vendor:
@@ -2025,15 +2241,15 @@ def import_spend(df):
                     print(
                         f"Updated existing Spend entry for vendor {vendor.vendor_name} in year {spend_import.year}"
                     )
+
+                # Update risk assessment after spend import
+                update_vendor_risk(vendor)
             except IntegrityError as e:
                 print(f"Error creating/updating Spend entry: {str(e)}")
         else:
             print(f"Warning: No vendor found with ID {spend_import.vendor_id}")
 
     SpendImport.objects.all().delete()
-
-
-# data_import/import_handlers.py
 
 
 @transaction.atomic
@@ -2066,7 +2282,6 @@ def import_vendors(df):
             relationship_type=row["relationship_type"],
         )
 
-    # Create Vendor and Part entries
     for vendor_import in VendorImport.objects.all():
         vendor, _ = Vendor.objects.update_or_create(
             vendor_id=vendor_import.vendor_id,
@@ -2079,11 +2294,6 @@ def import_vendors(df):
             },
         )
 
-        # Create or update the Risk object for the vendor
-        Risk.objects.update_or_create(
-            vendor=vendor, defaults={"risk_level": "MEDIUM"}  # Default risk level
-        )
-
         Part.objects.update_or_create(
             part_number=vendor_import.part_number,
             defaults={
@@ -2092,6 +2302,9 @@ def import_vendors(df):
                 "discount": 0,  # Default value, will be updated by discount import
             },
         )
+
+        # Update risk assessment
+        update_vendor_risk(vendor)
 
     VendorImport.objects.all().delete()
 
