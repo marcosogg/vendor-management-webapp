@@ -26,6 +26,10 @@ Directory structure of included files:
                 └── 0002_part_created_at_part_updated_at_risk_created_at_and_more.py
                 └── 0003_alter_vendor_relationship_type_activity.py
                 └── 0004_rename_updated_at_risk_last_updated_and_more.py
+                └── 0005_risk_last_assessment_date_risk_risk_score_and_more.py
+                └── 0006_vendor_country.py
+                └── 0007_remove_risk_last_assessment_date_and_more.py
+                └── 0008_vendor_average_discount_vendor_contract_type_and_more.py
                 └── __init__.py
                 └── __pycache__/
             └── templates/
@@ -55,6 +59,7 @@ Directory structure of included files:
             └── __init__.py
             └── migrations/
                 └── 0001_initial.py
+                └── 0002_vendorimport_contract_type.py
                 └── __init__.py
                 └── __pycache__/
             └── templates/
@@ -200,14 +205,40 @@ File: core\models.py
 ================================================================================
 """
 from django.db import models
+from django.db.models import Avg, Sum
+from django.utils import timezone
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.contrib.auth.models import User
 
 
 class Vendor(models.Model):
+    RELATIONSHIP_TYPE_CHOICES = [
+        ("DIRECT", "Direct"),
+        ("THIRD PARTY", "Third Party"),
+    ]
+
+    CONTRACT_TYPE_CHOICES = [
+        ("FIXED", "Fixed Price"),
+        ("TIME", "Time and Materials"),
+        ("COST", "Cost Plus"),
+    ]
+
     vendor_name = models.CharField(max_length=200)
     vendor_id = models.CharField(max_length=50, unique=True)
     payment_terms = models.CharField(max_length=100)
+    country = models.CharField(max_length=2, blank=True, null=True)
+    average_discount = models.DecimalField(max_digits=5, decimal_places=2, default=0)
+    contract_type = models.CharField(
+        max_length=10,
+        choices=CONTRACT_TYPE_CHOICES,
+        default="FIXED",
+    )
+    rating = models.DecimalField(
+        max_digits=3,
+        decimal_places=2,
+        default=0,
+        validators=[MinValueValidator(0), MaxValueValidator(5)],
+    )
     credit_limit = models.DecimalField(
         max_digits=10, decimal_places=2, validators=[MinValueValidator(0)]
     )
@@ -216,13 +247,34 @@ class Vendor(models.Model):
     )
     relationship_type = models.CharField(
         max_length=50,
-        choices=[
-            ("DIRECT", "Direct"),
-            ("THIRD PARTY", "Third Party"),
-        ],
+        choices=RELATIONSHIP_TYPE_CHOICES,
     )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+
+    def save(self, *args, **kwargs):
+        self.payment_terms = str(self.payment_terms)
+        super().save(*args, **kwargs)
+
+    def update_performance_metrics(self):
+        # Update average discount
+        avg_discount = self.parts.aggregate(Avg("discount"))["discount__avg"]
+        self.average_discount = avg_discount if avg_discount is not None else 0
+
+        # Update rating based on spend
+        current_year = timezone.now().year
+        total_spend = self.spends.filter(year=current_year).aggregate(
+            Sum("usd_amount")
+        )["usd_amount__sum"]
+        if total_spend:
+            # This is a simple rating calculation, you might want to adjust it based on your specific requirements
+            self.rating = min(
+                5, total_spend / 1000000
+            )  # 1 point for every million spent, max 5
+        else:
+            self.rating = 0
+
+        self.save()
 
     def __str__(self):
         return f"{self.vendor_name} ({self.vendor_id})"
@@ -252,11 +304,24 @@ class Spend(models.Model):
     usd_amount = models.DecimalField(
         max_digits=12, decimal_places=2, validators=[MinValueValidator(0)]
     )
+    relationship_type = models.CharField(
+        max_length=50,
+        choices=Vendor.RELATIONSHIP_TYPE_CHOICES,
+        default="DIRECT",
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         unique_together = ["vendor", "year"]
+
+    def __str__(self):
+        return f"{self.vendor.vendor_name} - {self.year}: ${self.usd_amount}"
+
+    def save(self, *args, **kwargs):
+        # Ensure relationship_type matches the vendor's relationship_type
+        self.relationship_type = self.vendor.relationship_type
+        super().save(*args, **kwargs)
 
 
 class Risk(models.Model):
@@ -341,11 +406,15 @@ def calculate_risk_score(vendor):
 
 
 def calculate_payment_terms_score(payment_terms):
+    payment_terms = str(payment_terms)  # Ensure payment_terms is a string
     if payment_terms == "PPAY":
         return 0
     elif payment_terms.startswith("Net "):
-        days = int(payment_terms.split()[1])
-        return 35 if days >= 30 else 5
+        try:
+            days = int(payment_terms.split()[1])
+            return 35 if days >= 30 else 5
+        except (IndexError, ValueError):
+            return 5  # Default to low score if we can't parse the number
     else:
         return 5  # Default to low score for unknown terms
 
@@ -460,10 +529,17 @@ File: core\urls.py
 ================================================================================
 """
 from django.urls import path
-from .views import DashboardView, VendorListView, VendorProfileView, global_search
+from .views import (
+    DashboardView,
+    VendorListView,
+    VendorProfileView,
+    global_search,
+    dashboard_data,
+)
 
 urlpatterns = [
     path("", DashboardView.as_view(), name="dashboard"),
+    path("api/dashboard-data/", dashboard_data, name="dashboard_data"),
     path("vendors/", VendorListView.as_view(), name="vendor_list"),
     path("vendors/<int:pk>/", VendorProfileView.as_view(), name="vendor_profile"),
     path("search/", global_search, name="global_search"),
@@ -496,6 +572,7 @@ def log_error(func):
 File: core\views.py
 ================================================================================
 """
+from django.http import JsonResponse
 from django.views.generic import ListView, DetailView, TemplateView
 from django.views.generic.edit import CreateView, UpdateView
 from django.db.models import Sum, Count, Q, Avg
@@ -519,17 +596,6 @@ import math
 logger = logging.getLogger(__name__)
 
 
-def format_number(num):
-    if num >= 1_000_000_000:  # Billions
-        return f"${num / 1_000_000_000:.2f}B"
-    elif num >= 1_000_000:  # Millions
-        return f"${num / 1_000_000:.2f}M"
-    elif num >= 1_000:  # Thousands
-        return f"${num / 1_000:.2f}K"
-    else:
-        return f"${num:,.2f}"
-
-
 @method_decorator(login_required, name="dispatch")
 class DashboardView(LoginRequiredMixin, TemplateView):
     template_name = "core/dashboard.html"
@@ -537,22 +603,45 @@ class DashboardView(LoginRequiredMixin, TemplateView):
     @log_error
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+
+        # Total vendors and parts
         context["total_vendors"] = Vendor.objects.count()
         context["total_parts"] = Part.objects.count()
 
-        total_spend = Spend.objects.aggregate(Sum("usd_amount"))["usd_amount__sum"] or 0
-        context["total_spend"] = format_number(total_spend)
+        # Total spend
+        total_spend = Spend.objects.aggregate(total=Sum("usd_amount"))["total"] or 0
+        context["total_spend"] = self.format_currency(total_spend)
 
+        # Average risk score
+        avg_risk_score = (
+            Risk.objects.aggregate(Avg("total_score"))["total_score__avg"] or 0
+        )
+        context["avg_risk_score"] = round(avg_risk_score, 2)
+
+        # High risk vendors
         context["high_risk_vendors"] = Vendor.objects.filter(
             risk__risk_level="HIGH"
         ).count()
+
+        # Top vendors by spend
         context["top_vendors"] = Vendor.objects.annotate(
             total_spend=Sum("spends__usd_amount")
         ).order_by("-total_spend")[:5]
 
+        # Recent activities
         context["recent_activities"] = Activity.objects.all().order_by("-date")[:10]
 
         return context
+
+    def format_currency(self, amount):
+        if amount >= 1_000_000_000:
+            return f"${amount / 1_000_000_000:.2f}B"
+        elif amount >= 1_000_000:
+            return f"${amount / 1_000_000:.2f}M"
+        elif amount >= 1_000:
+            return f"${amount / 1_000:.2f}K"
+        else:
+            return f"${amount:,.2f}"
 
 
 class VendorListView(LoginRequiredMixin, ListView):
@@ -708,6 +797,119 @@ def global_search(request):
     return render(
         request, "core/search_results.html", {"query": query, "results": results}
     )
+
+
+def vendor_performance(request):
+    performance_data = Vendor.objects.annotate(
+        avg_rating=Avg("rating"), avg_discount=Avg("average_discount")
+    ).values("avg_rating", "avg_discount")
+    return JsonResponse(list(performance_data), safe=False)
+
+
+def contract_type_distribution(request):
+    contract_data = Vendor.objects.values("contract_type").annotate(
+        count=Count("contract_type")
+    )
+    return JsonResponse(list(contract_data), safe=False)
+
+
+def format_currency(amount):
+    if amount >= 1_000_000_000:
+        return f"${amount / 1_000_000_000:.2f}B"
+    elif amount >= 1_000_000:
+        return f"${amount / 1_000_000:.2f}M"
+    elif amount >= 1_000:
+        return f"${amount / 1_000:.2f}K"
+    else:
+        return f"${amount:,.2f}"
+
+
+def dashboard_data(request):
+    try:
+        # Fetch and calculate all required data
+        risk_distribution = list(
+            Risk.objects.values("risk_level").annotate(count=Count("risk_level"))
+        )
+
+        spend_by_year = list(
+            Spend.objects.values("year").annotate(total_spend=Sum("usd_amount"))
+        )
+        total_spend = sum(
+            item["total_spend"] for item in spend_by_year if item["total_spend"]
+        )
+
+        spend_by_relationship = list(
+            Spend.objects.values("relationship_type").annotate(
+                total_spend=Sum("usd_amount")
+            )
+        )
+
+        vendor_performance = Vendor.objects.aggregate(
+            avg_rating=Avg("rating"), avg_discount=Avg("average_discount")
+        )
+
+        contract_distribution = list(
+            Vendor.objects.values("contract_type").annotate(
+                count=Count("contract_type")
+            )
+        )
+
+        geographical_distribution = list(
+            Vendor.objects.values("country").annotate(count=Count("country"))
+        )
+
+        high_risk_vendors = Vendor.objects.filter(risk__risk_level="HIGH").count()
+
+        data = {
+            "risk_distribution": list(
+                Risk.objects.values("risk_level").annotate(count=Count("risk_level"))
+            ),
+            "total_spend": format_currency(total_spend),
+            "spend_by_year": list(
+                Spend.objects.values("year").annotate(total_spend=Sum("usd_amount"))
+            ),
+            "spend_by_relationship": list(
+                Spend.objects.values("relationship_type").annotate(
+                    total_spend=Sum("usd_amount")
+                )
+            ),
+            "vendor_performance": Vendor.objects.aggregate(
+                avg_rating=Avg("rating"), avg_discount=Avg("average_discount")
+            ),
+            "contract_distribution": list(
+                Vendor.objects.values("contract_type").annotate(
+                    count=Count("contract_type")
+                )
+            ),
+            "geographical_distribution": list(
+                Vendor.objects.values("country").annotate(count=Count("country"))
+            ),
+            "high_risk_vendors": Vendor.objects.filter(risk__risk_level="HIGH").count(),
+        }
+        logger.info(f"Dashboard data: {data}")
+        return JsonResponse(data)
+    except Exception as e:
+        logger.error(f"Error fetching dashboard data: {str(e)}")
+        return JsonResponse(
+            {"error": "An error occurred while fetching dashboard data"}, status=500
+        )
+
+
+def dashboard(request):
+    context = {
+        "total_vendors": Vendor.objects.count(),
+        "total_spend": Spend.objects.aggregate(total=Sum("usd_amount"))["total"],
+        "avg_risk_score": Risk.objects.aggregate(avg_score=Avg("total_score"))[
+            "avg_score"
+        ],
+        "recent_activities": Activity.objects.all().order_by("-date")[:10],
+    }
+    return render(request, "core/dashboard.html", context)
+
+
+def risk_distribution(request):
+    risk_data = Risk.objects.values("risk_level").annotate(count=Count("risk_level"))
+    return JsonResponse(list(risk_data), safe=False)
 
 """
 
@@ -1204,6 +1406,157 @@ class Migration(migrations.Migration):
 """
 
 ================================================================================
+File: core\migrations\0005_risk_last_assessment_date_risk_risk_score_and_more.py
+================================================================================
+"""
+# Generated by Django 5.0.7 on 2024-07-31 13:16
+
+from django.db import migrations, models
+
+
+class Migration(migrations.Migration):
+
+    dependencies = [
+        ('core', '0004_rename_updated_at_risk_last_updated_and_more'),
+    ]
+
+    operations = [
+        migrations.AddField(
+            model_name='risk',
+            name='last_assessment_date',
+            field=models.DateTimeField(auto_now=True),
+        ),
+        migrations.AddField(
+            model_name='risk',
+            name='risk_score',
+            field=models.IntegerField(default=0),
+        ),
+        migrations.AddField(
+            model_name='spend',
+            name='relationship_type',
+            field=models.CharField(choices=[('DIRECT', 'Direct'), ('THIRD PARTY', 'Third Party')], default='DIRECT', max_length=50),
+        ),
+        migrations.AddField(
+            model_name='vendor',
+            name='average_discount',
+            field=models.DecimalField(decimal_places=2, default=0, max_digits=5),
+        ),
+        migrations.AddField(
+            model_name='vendor',
+            name='contract_type',
+            field=models.CharField(choices=[('FIXED', 'Fixed Price'), ('TIME', 'Time and Materials'), ('COST', 'Cost Plus')], default='FIXED', max_length=10),
+        ),
+        migrations.AddField(
+            model_name='vendor',
+            name='rating',
+            field=models.DecimalField(decimal_places=2, default=0, max_digits=3),
+        ),
+    ]
+
+"""
+
+================================================================================
+File: core\migrations\0006_vendor_country.py
+================================================================================
+"""
+# Generated by Django 5.0.7 on 2024-07-31 13:18
+
+from django.db import migrations, models
+
+
+class Migration(migrations.Migration):
+
+    dependencies = [
+        ('core', '0005_risk_last_assessment_date_risk_risk_score_and_more'),
+    ]
+
+    operations = [
+        migrations.AddField(
+            model_name='vendor',
+            name='country',
+            field=models.CharField(blank=True, max_length=2, null=True),
+        ),
+    ]
+
+"""
+
+================================================================================
+File: core\migrations\0007_remove_risk_last_assessment_date_and_more.py
+================================================================================
+"""
+# Generated by Django 5.0.7 on 2024-07-31 14:21
+
+from django.db import migrations
+
+
+class Migration(migrations.Migration):
+
+    dependencies = [
+        ('core', '0006_vendor_country'),
+    ]
+
+    operations = [
+        migrations.RemoveField(
+            model_name='risk',
+            name='last_assessment_date',
+        ),
+        migrations.RemoveField(
+            model_name='risk',
+            name='risk_score',
+        ),
+        migrations.RemoveField(
+            model_name='vendor',
+            name='average_discount',
+        ),
+        migrations.RemoveField(
+            model_name='vendor',
+            name='contract_type',
+        ),
+        migrations.RemoveField(
+            model_name='vendor',
+            name='rating',
+        ),
+    ]
+
+"""
+
+================================================================================
+File: core\migrations\0008_vendor_average_discount_vendor_contract_type_and_more.py
+================================================================================
+"""
+# Generated by Django 5.0.7 on 2024-07-31 14:28
+
+import django.core.validators
+from django.db import migrations, models
+
+
+class Migration(migrations.Migration):
+
+    dependencies = [
+        ('core', '0007_remove_risk_last_assessment_date_and_more'),
+    ]
+
+    operations = [
+        migrations.AddField(
+            model_name='vendor',
+            name='average_discount',
+            field=models.DecimalField(decimal_places=2, default=0, max_digits=5),
+        ),
+        migrations.AddField(
+            model_name='vendor',
+            name='contract_type',
+            field=models.CharField(choices=[('FIXED', 'Fixed Price'), ('TIME', 'Time and Materials'), ('COST', 'Cost Plus')], default='FIXED', max_length=10),
+        ),
+        migrations.AddField(
+            model_name='vendor',
+            name='rating',
+            field=models.DecimalField(decimal_places=2, default=0, max_digits=3, validators=[django.core.validators.MinValueValidator(0), django.core.validators.MaxValueValidator(5)]),
+        ),
+    ]
+
+"""
+
+================================================================================
 File: core\migrations\__init__.py
 ================================================================================
 """
@@ -1216,229 +1569,195 @@ File: core\templates\core\dashboard.html
 """
 {% extends 'base.html' %}
 {% load static %}
-{% load humanize %}
-
-{% block title %}Dashboard - Vendor Management{% endblock %}
 
 {% block content %}
+<h1 class="text-3xl font-bold mb-6">Vendor Management Dashboard</h1>
 
-<h1 class="text-3xl font-bold mb-6 text-navy dashboard-header">Vendor Management Dashboard</h1>
-
-<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8 metrics-grid">
-    <div class="bg-white rounded-lg shadow-md p-6 transition-all hover:shadow-lg"
-        data-tippy-content="Total number of vendors in the system">
-        <h2 class="text-lg font-semibold mb-2 text-navy">Total Vendors</h2>
-        <p class="text-3xl font-bold text-raspberry">{{ total_vendors }}</p>
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+    <div class="bg-white p-4 rounded shadow">
+        <h2 class="text-lg font-semibold mb-2">Total Vendors</h2>
+        <p class="text-3xl">{{ total_vendors }}</p>
     </div>
-    <div class="bg-white rounded-lg shadow-md p-6 transition-all hover:shadow-lg"
-        data-tippy-content="Total number of parts across all vendors">
-        <h2 class="text-lg font-semibold mb-2 text-navy">Total Parts</h2>
-        <p class="text-3xl font-bold text-raspberry">{{ total_parts }}</p>
+    <div class="bg-white p-4 rounded shadow">
+        <h2 class="text-lg font-semibold mb-2">Total Spend</h2>
+        <p class="text-3xl" id="total-spend">{{ total_spend }}</p>
     </div>
-    <div class="bg-white rounded-lg shadow-md p-6 transition-all hover:shadow-lg"
-        data-tippy-content="Total spend across all vendors">
-        <h2 class="text-lg font-semibold mb-2 text-navy">Total Spend</h2>
-        <p class="text-3xl font-bold text-raspberry">{{ total_spend|intcomma }}</p>
+    <div class="bg-white p-4 rounded shadow">
+        <h2 class="text-lg font-semibold mb-2">Avg Risk Score</h2>
+        <p class="text-3xl">{{ avg_risk_score|floatformat:2 }}</p>
     </div>
-    <div class="bg-white rounded-lg shadow-md p-6 transition-all hover:shadow-lg"
-        data-tippy-content="Number of vendors classified as high risk">
-        <h2 class="text-lg font-semibold mb-2 text-navy">High Risk Vendors</h2>
-        <p class="text-3xl font-bold text-raspberry">{{ high_risk_vendors }}</p>
+    <div class="bg-white p-4 rounded shadow">
+        <h2 class="text-lg font-semibold mb-2">High Risk Vendors</h2>
+        <p class="text-3xl" id="high-risk-vendors">Loading...</p>
     </div>
 </div>
 
-<div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-    <div class="bg-white rounded-lg shadow-md p-6 transition-all hover:shadow-lg">
-        <h2 class="text-xl font-semibold mb-4 text-navy">Top 5 Vendors by Spend</h2>
-        <canvas id="topVendorsChart"></canvas>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+    <div class="bg-white p-4 rounded shadow">
+        <h2 class="text-lg font-semibold mb-2">Risk Distribution</h2>
+        <canvas id="risk-chart"></canvas>
     </div>
-    <div class="bg-white rounded-lg shadow-md p-6 transition-all hover:shadow-lg">
-        <h2 class="text-xl font-semibold mb-4 text-navy">Quick Links</h2>
-        <ul class="space-y-2">
-            <li><a href="{% url 'vendor_list' %}" class="text-blue-600 hover:underline transition-all">View All
-                    Vendors</a></li>
-            <li><a href="{% url 'import_data' %}" class="text-blue-600 hover:underline transition-all">Import Data</a>
-            </li>
-        </ul>
+    <div class="bg-white p-4 rounded shadow">
+        <h2 class="text-lg font-semibold mb-2">Spend by Year</h2>
+        <canvas id="spend-chart"></canvas>
+    </div>
+    <div class="bg-white p-4 rounded shadow">
+        <h2 class="text-lg font-semibold mb-2">Spend by Relationship Type</h2>
+        <canvas id="relationship-chart"></canvas>
+    </div>
+    <div class="bg-white p-4 rounded shadow">
+        <h2 class="text-lg font-semibold mb-2">Contract Type Distribution</h2>
+        <canvas id="contract-chart"></canvas>
+    </div>
+    <div class="bg-white p-4 rounded shadow">
+        <h2 class="text-lg font-semibold mb-2">Geographical Distribution</h2>
+        <canvas id="geo-chart"></canvas>
+    </div>
+    <div class="bg-white p-4 rounded shadow">
+        <h2 class="text-lg font-semibold mb-2">Vendor Performance</h2>
+        <p>Average Rating: <span id="avg-rating">Loading...</span></p>
+        <p>Average Discount: <span id="avg-discount">Loading...</span></p>
     </div>
 </div>
 
-<div class="bg-white rounded-lg shadow-md p-6 transition-all hover:shadow-lg">
-    <h2 class="text-xl font-semibold mb-4 text-navy">Recent Activity</h2>
-    <table class="min-w-full divide-y divide-gray-200">
-        <thead class="bg-gray-50">
-            <tr>
-                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Date</th>
-                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Action</th>
-                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Details</th>
-            </tr>
-        </thead>
-        <tbody class="bg-white divide-y divide-gray-200">
-            {% for activity in recent_activities %}
-            <tr class="hover:bg-gray-50 transition-all">
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ activity.date|date:"Y-m-d H:i" }}</td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ activity.action }}</td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ activity.details }}</td>
-            </tr>
-            {% empty %}
-            <tr>
-                <td colspan="3" class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-center">No recent activity
-                </td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
+<div class="bg-white p-4 rounded shadow mb-8">
+    <h2 class="text-lg font-semibold mb-2">Recent Activity</h2>
+    <ul>
+        {% for activity in recent_activities %}
+        <li>{{ activity.date|date:"Y-m-d H:i" }} - {{ activity.action }} - {{ activity.details }}</li>
+        {% endfor %}
+    </ul>
 </div>
+
+<button id="export-btn" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
+    Export Dashboard Data
+</button>
 {% endblock %}
 
 {% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
     document.addEventListener('DOMContentLoaded', function () {
-        const userMenu = document.getElementById('user-menu');
-        const menuItems = ['Profile', 'Settings', 'Sign out'];
+        fetch('/api/dashboard-data/')
+            .then(response => response.json())
+            .then(data => {
+                updateDashboard(data);
+            });
 
-        // Chart.js initialization
-        var ctx = document.getElementById('topVendorsChart').getContext('2d');
-        var chart = new Chart(ctx, {
-            type: 'bar',
-            data: {
-                labels: [{% for vendor in top_vendors %}'{{ vendor.vendor_name }}',{% endfor %}],
-        datasets: [{
-            label: 'Total Spend',
-            data: [{% for vendor in top_vendors %}{{ vendor.total_spend }}, {% endfor %}],
-        backgroundColor: [
-        'rgba(255, 99, 132, 0.8)',
-        'rgba(54, 162, 235, 0.8)',
-        'rgba(255, 206, 86, 0.8)',
-        'rgba(75, 192, 192, 0.8)',
-        'rgba(153, 102, 255, 0.8)'
-    ]
-                }]
-            },
-        options: {
-        responsive: true,
-        scales: {
-            y: {
-                beginAtZero: true,
-                title: {
-                    display: true,
-                    text: 'Total Spend ($)'
+        function updateDashboard(data) {
+            console.log('Received dashboard data:', data);
+
+            function updateElement(id, value) {
+                const element = document.getElementById(id);
+                if (element) {
+                    element.textContent = value;
+                } else {
+                    console.error(`Element with id '${id}' not found`);
                 }
             }
-        },
-        plugins: {
-            legend: {
-                display: false
-            },
-            tooltip: {
-                callbacks: {
-                    label: function (context) {
-                        let label = context.dataset.label || '';
-                        if (label) {
-                            label += ': ';
+
+            function createChart(canvasId, type, data, labelKey, valueKey) {
+                const canvas = document.getElementById(canvasId);
+                if (!canvas) {
+                    console.error(`Canvas with id '${canvasId}' not found`);
+                    return;
+                }
+
+                new Chart(canvas, {
+                    type: type,
+                    data: {
+                        labels: data.map(item => item[labelKey]),
+                        datasets: [{
+                            data: data.map(item => item[valueKey]),
+                            backgroundColor: [
+                                'rgba(255, 99, 132, 0.8)',
+                                'rgba(54, 162, 235, 0.8)',
+                                'rgba(255, 206, 86, 0.8)',
+                                'rgba(75, 192, 192, 0.8)',
+                                'rgba(153, 102, 255, 0.8)',
+                            ],
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: {
+                            legend: {
+                                position: 'top',
+                            },
+                            title: {
+                                display: true,
+                                text: canvasId.replace('-', ' ').toUpperCase()
+                            }
                         }
-                        if (context.parsed.y !== null) {
-                            label += new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(context.parsed.y);
-                        }
-                        return label;
                     }
-                }
+                });
             }
+
+            // Update high risk vendors count
+            updateElement('high-risk-vendors', data.high_risk_vendors);
+
+            // Calculate and update total spend
+            const totalSpend = data.spend_by_year.reduce((sum, year) => sum + parseFloat(year.total_spend), 0);
+            updateElement('total-spend', data.total_spend);
+
+            // Update vendor performance
+            if (data.vendor_performance) {
+                updateElement('avg-rating', parseFloat(data.vendor_performance.avg_rating).toFixed(2));
+                updateElement('avg-discount', parseFloat(data.vendor_performance.avg_discount).toFixed(2) + '%');
+            } else {
+                console.error('Vendor performance data is missing');
+            }
+
+            // Create charts
+            createChart('risk-chart', 'pie', data.risk_distribution, 'risk_level', 'count');
+            createChart('spend-chart', 'line', data.spend_by_year, 'year', 'total_spend');
+            createChart('relationship-chart', 'bar', data.spend_by_relationship, 'relationship_type', 'total_spend');
+            createChart('contract-chart', 'pie', data.contract_distribution, 'contract_type', 'count');
+
+            // For geographical distribution, we'll limit to top 10 countries for better visualization
+            const topCountries = data.geographical_distribution
+                .sort((a, b) => b.count - a.count)
+                .slice(0, 10);
+            createChart('geo-chart', 'bar', topCountries, 'country', 'count');
+
+            // Update any additional elements or charts here
+
+            console.log('Dashboard update completed');
         }
-    }
+
+        // Export functionality
+        document.getElementById('export-btn').addEventListener('click', function () {
+            fetch('/api/dashboard-data/')
+                .then(response => response.json())
+                .then(data => {
+                    let csv = 'data:text/csv;charset=utf-8,';
+                    // Add headers
+                    csv += 'Category,Subcategory,Value\n';
+
+                    // Add data
+                    for (let key in data) {
+                        if (Array.isArray(data[key])) {
+                            data[key].forEach(item => {
+                                csv += `${key},${Object.values(item).join(',')}\n`;
+                            });
+                        } else if (typeof data[key] === 'object') {
+                            for (let subKey in data[key]) {
+                                csv += `${key},${subKey},${data[key][subKey]}\n`;
+                            }
+                        } else {
+                            csv += `${key},,${data[key]}\n`;
+                        }
+                    }
+
+                    // Create download link
+                    var encodedUri = encodeURI(csv);
+                    var link = document.createElement("a");
+                    link.setAttribute("href", encodedUri);
+                    link.setAttribute("download", "dashboard_data.csv");
+                    document.body.appendChild(link);
+                    link.click();
+                });
         });
-
-    // Guided Tour
-    const tour = new Shepherd.Tour({
-        defaultStepOptions: {
-            cancelIcon: {
-                enabled: true
-            },
-            classes: 'shadow-md bg-purple-dark',
-            scrollTo: { behavior: 'smooth', block: 'center' }
-        }
-    });
-
-    tour.addStep({
-        id: 'welcome',
-        text: 'Welcome to the Vendor Management Dashboard! Let\'s take a quick tour.',
-        attachTo: {
-            element: '.dashboard-header',
-            on: 'bottom'
-        },
-        buttons: [
-            {
-                text: 'Next',
-                action: tour.next
-            }
-        ]
-    });
-
-    tour.addStep({
-        id: 'metrics',
-        text: 'Here you can see key metrics at a glance.',
-        attachTo: {
-            element: '.metrics-grid',
-            on: 'bottom'
-        },
-        buttons: [
-            {
-                text: 'Back',
-                action: tour.back
-            },
-            {
-                text: 'Next',
-                action: tour.next
-            }
-        ]
-    });
-
-    tour.addStep({
-        id: 'top-vendors',
-        text: 'This chart shows the top 5 vendors by total spend.',
-        attachTo: {
-            element: '#topVendorsChart',
-            on: 'bottom'
-        },
-        buttons: [
-            {
-                text: 'Back',
-                action: tour.back
-            },
-            {
-                text: 'Next',
-                action: tour.next
-            }
-        ]
-    });
-
-    tour.addStep({
-        id: 'recent-activity',
-        text: 'Here you can see recent activities in the system.',
-        attachTo: {
-            element: 'table',
-            on: 'top'
-        },
-        buttons: [
-            {
-                text: 'Back',
-                action: tour.back
-            },
-            {
-                text: 'Done',
-                action: tour.complete
-            }
-        ]
-    });
-
-    // Start the tour
-    if (!localStorage.getItem('tourCompleted')) {
-        tour.start();
-        localStorage.setItem('tourCompleted', 'true');
-    }
     });
 </script>
 {% endblock %}
@@ -2161,6 +2480,8 @@ class FileUploadForm(forms.Form):
 File: data_import\import_handlers.py
 ================================================================================
 """
+# data_import/import_handlers.py
+
 import pandas as pd
 from django.db import transaction
 from core.models import Vendor, Part, Spend, Risk
@@ -2204,9 +2525,13 @@ def import_discount(df):
         )
 
     for discount_import in DiscountImport.objects.all():
-        Part.objects.filter(part_number=discount_import.part_number).update(
-            discount=discount_import.discount
-        )
+        part = Part.objects.filter(part_number=discount_import.part_number).first()
+        if part:
+            part.discount = discount_import.discount
+            part.save()
+            part.vendor.update_performance_metrics()
+        else:
+            print(f"Warning: No part found with number {discount_import.part_number}")
 
     DiscountImport.objects.all().delete()
 
@@ -2231,7 +2556,9 @@ def import_spend(df):
                 spend, created = Spend.objects.update_or_create(
                     vendor=vendor,
                     year=spend_import.year,
-                    defaults={"usd_amount": spend_import.usd_amount},
+                    defaults={
+                        "usd_amount": spend_import.usd_amount,
+                    },
                 )
                 if created:
                     print(
@@ -2242,8 +2569,9 @@ def import_spend(df):
                         f"Updated existing Spend entry for vendor {vendor.vendor_name} in year {spend_import.year}"
                     )
 
-                # Update risk assessment after spend import
+                # Update risk assessment and performance metrics after spend import
                 update_vendor_risk(vendor)
+                vendor.update_performance_metrics()
             except IntegrityError as e:
                 print(f"Error creating/updating Spend entry: {str(e)}")
         else:
@@ -2264,6 +2592,7 @@ def import_vendors(df):
         "contract_year",
         "relationship_type",
     ]
+    # Remove "contract_type" from the required columns list
     missing_columns = [col for col in required_columns if col not in df.columns]
     if missing_columns:
         raise ValueError(
@@ -2271,40 +2600,33 @@ def import_vendors(df):
         )
 
     for _, row in df.iterrows():
-        VendorImport.objects.create(
-            part_number=row["part_number"],
+        vendor, created = Vendor.objects.update_or_create(
             vendor_id=row["vendor_id"],
-            vendor=row["vendor"],
-            buyer=row["buyer"],
-            payment_terms=row["payment_terms"],
-            credit_limit=row["credit_limit"],
-            contract_year=row["contract_year"],
-            relationship_type=row["relationship_type"],
-        )
-
-    for vendor_import in VendorImport.objects.all():
-        vendor, _ = Vendor.objects.update_or_create(
-            vendor_id=vendor_import.vendor_id,
             defaults={
-                "vendor_name": vendor_import.vendor,
-                "payment_terms": vendor_import.payment_terms,
-                "credit_limit": vendor_import.credit_limit,
-                "contract_year": vendor_import.contract_year,
-                "relationship_type": vendor_import.relationship_type,
+                "vendor_name": row["vendor"],
+                "payment_terms": str(row["payment_terms"]),  # Convert to string
+                "credit_limit": row["credit_limit"],
+                "contract_year": row["contract_year"],
+                "relationship_type": row["relationship_type"],
+                "contract_type": "Direct",  # Set a default value
+                "country": row["part_number"].split("-")[
+                    2
+                ],  # Extract country from part number
             },
         )
 
         Part.objects.update_or_create(
-            part_number=vendor_import.part_number,
+            part_number=row["part_number"],
             defaults={
                 "vendor": vendor,
-                "buyer": vendor_import.buyer,
+                "buyer": row["buyer"],
                 "discount": 0,  # Default value, will be updated by discount import
             },
         )
 
-        # Update risk assessment
+        # Update risk assessment and performance metrics
         update_vendor_risk(vendor)
+        vendor.update_performance_metrics()
 
     VendorImport.objects.all().delete()
 
@@ -2339,6 +2661,10 @@ class VendorImport(models.Model):
     credit_limit = models.DecimalField(max_digits=10, decimal_places=2)
     contract_year = models.IntegerField()
     relationship_type = models.CharField(max_length=50)
+    contract_type = models.CharField(max_length=10, default="FIXED")  # Add this line
+
+    def __str__(self):
+        return f"{self.vendor} ({self.vendor_id})"
 
 """
 
@@ -2475,6 +2801,31 @@ class Migration(migrations.Migration):
 """
 
 ================================================================================
+File: data_import\migrations\0002_vendorimport_contract_type.py
+================================================================================
+"""
+# Generated by Django 5.0.7 on 2024-07-31 13:16
+
+from django.db import migrations, models
+
+
+class Migration(migrations.Migration):
+
+    dependencies = [
+        ('data_import', '0001_initial'),
+    ]
+
+    operations = [
+        migrations.AddField(
+            model_name='vendorimport',
+            name='contract_type',
+            field=models.CharField(default='FIXED', max_length=10),
+        ),
+    ]
+
+"""
+
+================================================================================
 File: data_import\migrations\__init__.py
 ================================================================================
 """
@@ -2537,6 +2888,7 @@ File: templates\base.html
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="shortcut icon" type="image/x-icon" href="{% static 'favicon.ico' %}">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.7.1/dist/chart.min.js"></script>
     <title>{% block title %}Vendor Management System{% endblock %}</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>

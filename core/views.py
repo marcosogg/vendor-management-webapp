@@ -1,3 +1,4 @@
+from django.http import JsonResponse
 from django.views.generic import ListView, DetailView, TemplateView
 from django.views.generic.edit import CreateView, UpdateView
 from django.db.models import Sum, Count, Q, Avg
@@ -21,17 +22,6 @@ import math
 logger = logging.getLogger(__name__)
 
 
-def format_number(num):
-    if num >= 1_000_000_000:  # Billions
-        return f"${num / 1_000_000_000:.2f}B"
-    elif num >= 1_000_000:  # Millions
-        return f"${num / 1_000_000:.2f}M"
-    elif num >= 1_000:  # Thousands
-        return f"${num / 1_000:.2f}K"
-    else:
-        return f"${num:,.2f}"
-
-
 @method_decorator(login_required, name="dispatch")
 class DashboardView(LoginRequiredMixin, TemplateView):
     template_name = "core/dashboard.html"
@@ -39,22 +29,45 @@ class DashboardView(LoginRequiredMixin, TemplateView):
     @log_error
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+
+        # Total vendors and parts
         context["total_vendors"] = Vendor.objects.count()
         context["total_parts"] = Part.objects.count()
 
-        total_spend = Spend.objects.aggregate(Sum("usd_amount"))["usd_amount__sum"] or 0
-        context["total_spend"] = format_number(total_spend)
+        # Total spend
+        total_spend = Spend.objects.aggregate(total=Sum("usd_amount"))["total"] or 0
+        context["total_spend"] = self.format_currency(total_spend)
 
+        # Average risk score
+        avg_risk_score = (
+            Risk.objects.aggregate(Avg("total_score"))["total_score__avg"] or 0
+        )
+        context["avg_risk_score"] = round(avg_risk_score, 2)
+
+        # High risk vendors
         context["high_risk_vendors"] = Vendor.objects.filter(
             risk__risk_level="HIGH"
         ).count()
+
+        # Top vendors by spend
         context["top_vendors"] = Vendor.objects.annotate(
             total_spend=Sum("spends__usd_amount")
         ).order_by("-total_spend")[:5]
 
+        # Recent activities
         context["recent_activities"] = Activity.objects.all().order_by("-date")[:10]
 
         return context
+
+    def format_currency(self, amount):
+        if amount >= 1_000_000_000:
+            return f"${amount / 1_000_000_000:.2f}B"
+        elif amount >= 1_000_000:
+            return f"${amount / 1_000_000:.2f}M"
+        elif amount >= 1_000:
+            return f"${amount / 1_000:.2f}K"
+        else:
+            return f"${amount:,.2f}"
 
 
 class VendorListView(LoginRequiredMixin, ListView):
@@ -210,3 +223,116 @@ def global_search(request):
     return render(
         request, "core/search_results.html", {"query": query, "results": results}
     )
+
+
+def vendor_performance(request):
+    performance_data = Vendor.objects.annotate(
+        avg_rating=Avg("rating"), avg_discount=Avg("average_discount")
+    ).values("avg_rating", "avg_discount")
+    return JsonResponse(list(performance_data), safe=False)
+
+
+def contract_type_distribution(request):
+    contract_data = Vendor.objects.values("contract_type").annotate(
+        count=Count("contract_type")
+    )
+    return JsonResponse(list(contract_data), safe=False)
+
+
+def format_currency(amount):
+    if amount >= 1_000_000_000:
+        return f"${amount / 1_000_000_000:.2f}B"
+    elif amount >= 1_000_000:
+        return f"${amount / 1_000_000:.2f}M"
+    elif amount >= 1_000:
+        return f"${amount / 1_000:.2f}K"
+    else:
+        return f"${amount:,.2f}"
+
+
+def dashboard_data(request):
+    try:
+        # Fetch and calculate all required data
+        risk_distribution = list(
+            Risk.objects.values("risk_level").annotate(count=Count("risk_level"))
+        )
+
+        spend_by_year = list(
+            Spend.objects.values("year").annotate(total_spend=Sum("usd_amount"))
+        )
+        total_spend = sum(
+            item["total_spend"] for item in spend_by_year if item["total_spend"]
+        )
+
+        spend_by_relationship = list(
+            Spend.objects.values("relationship_type").annotate(
+                total_spend=Sum("usd_amount")
+            )
+        )
+
+        vendor_performance = Vendor.objects.aggregate(
+            avg_rating=Avg("rating"), avg_discount=Avg("average_discount")
+        )
+
+        contract_distribution = list(
+            Vendor.objects.values("contract_type").annotate(
+                count=Count("contract_type")
+            )
+        )
+
+        geographical_distribution = list(
+            Vendor.objects.values("country").annotate(count=Count("country"))
+        )
+
+        high_risk_vendors = Vendor.objects.filter(risk__risk_level="HIGH").count()
+
+        data = {
+            "risk_distribution": list(
+                Risk.objects.values("risk_level").annotate(count=Count("risk_level"))
+            ),
+            "total_spend": format_currency(total_spend),
+            "spend_by_year": list(
+                Spend.objects.values("year").annotate(total_spend=Sum("usd_amount"))
+            ),
+            "spend_by_relationship": list(
+                Spend.objects.values("relationship_type").annotate(
+                    total_spend=Sum("usd_amount")
+                )
+            ),
+            "vendor_performance": Vendor.objects.aggregate(
+                avg_rating=Avg("rating"), avg_discount=Avg("average_discount")
+            ),
+            "contract_distribution": list(
+                Vendor.objects.values("contract_type").annotate(
+                    count=Count("contract_type")
+                )
+            ),
+            "geographical_distribution": list(
+                Vendor.objects.values("country").annotate(count=Count("country"))
+            ),
+            "high_risk_vendors": Vendor.objects.filter(risk__risk_level="HIGH").count(),
+        }
+        logger.info(f"Dashboard data: {data}")
+        return JsonResponse(data)
+    except Exception as e:
+        logger.error(f"Error fetching dashboard data: {str(e)}")
+        return JsonResponse(
+            {"error": "An error occurred while fetching dashboard data"}, status=500
+        )
+
+
+def dashboard(request):
+    context = {
+        "total_vendors": Vendor.objects.count(),
+        "total_spend": Spend.objects.aggregate(total=Sum("usd_amount"))["total"],
+        "avg_risk_score": Risk.objects.aggregate(avg_score=Avg("total_score"))[
+            "avg_score"
+        ],
+        "recent_activities": Activity.objects.all().order_by("-date")[:10],
+    }
+    return render(request, "core/dashboard.html", context)
+
+
+def risk_distribution(request):
+    risk_data = Risk.objects.values("risk_level").annotate(count=Count("risk_level"))
+    return JsonResponse(list(risk_data), safe=False)

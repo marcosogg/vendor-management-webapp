@@ -1,228 +1,194 @@
 {% extends 'base.html' %}
 {% load static %}
-{% load humanize %}
-
-{% block title %}Dashboard - Vendor Management{% endblock %}
 
 {% block content %}
+<h1 class="text-3xl font-bold mb-6">Vendor Management Dashboard</h1>
 
-<h1 class="text-3xl font-bold mb-6 text-navy dashboard-header">Vendor Management Dashboard</h1>
-
-<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8 metrics-grid">
-    <div class="bg-white rounded-lg shadow-md p-6 transition-all hover:shadow-lg"
-        data-tippy-content="Total number of vendors in the system">
-        <h2 class="text-lg font-semibold mb-2 text-navy">Total Vendors</h2>
-        <p class="text-3xl font-bold text-raspberry">{{ total_vendors }}</p>
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+    <div class="bg-white p-4 rounded shadow">
+        <h2 class="text-lg font-semibold mb-2">Total Vendors</h2>
+        <p class="text-3xl">{{ total_vendors }}</p>
     </div>
-    <div class="bg-white rounded-lg shadow-md p-6 transition-all hover:shadow-lg"
-        data-tippy-content="Total number of parts across all vendors">
-        <h2 class="text-lg font-semibold mb-2 text-navy">Total Parts</h2>
-        <p class="text-3xl font-bold text-raspberry">{{ total_parts }}</p>
+    <div class="bg-white p-4 rounded shadow">
+        <h2 class="text-lg font-semibold mb-2">Total Spend</h2>
+        <p class="text-3xl" id="total-spend">{{ total_spend }}</p>
     </div>
-    <div class="bg-white rounded-lg shadow-md p-6 transition-all hover:shadow-lg"
-        data-tippy-content="Total spend across all vendors">
-        <h2 class="text-lg font-semibold mb-2 text-navy">Total Spend</h2>
-        <p class="text-3xl font-bold text-raspberry">{{ total_spend|intcomma }}</p>
+    <div class="bg-white p-4 rounded shadow">
+        <h2 class="text-lg font-semibold mb-2">Avg Risk Score</h2>
+        <p class="text-3xl">{{ avg_risk_score|floatformat:2 }}</p>
     </div>
-    <div class="bg-white rounded-lg shadow-md p-6 transition-all hover:shadow-lg"
-        data-tippy-content="Number of vendors classified as high risk">
-        <h2 class="text-lg font-semibold mb-2 text-navy">High Risk Vendors</h2>
-        <p class="text-3xl font-bold text-raspberry">{{ high_risk_vendors }}</p>
+    <div class="bg-white p-4 rounded shadow">
+        <h2 class="text-lg font-semibold mb-2">High Risk Vendors</h2>
+        <p class="text-3xl" id="high-risk-vendors">Loading...</p>
     </div>
 </div>
 
-<div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-    <div class="bg-white rounded-lg shadow-md p-6 transition-all hover:shadow-lg">
-        <h2 class="text-xl font-semibold mb-4 text-navy">Top 5 Vendors by Spend</h2>
-        <canvas id="topVendorsChart"></canvas>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+    <div class="bg-white p-4 rounded shadow">
+        <h2 class="text-lg font-semibold mb-2">Risk Distribution</h2>
+        <canvas id="risk-chart"></canvas>
     </div>
-    <div class="bg-white rounded-lg shadow-md p-6 transition-all hover:shadow-lg">
-        <h2 class="text-xl font-semibold mb-4 text-navy">Quick Links</h2>
-        <ul class="space-y-2">
-            <li><a href="{% url 'vendor_list' %}" class="text-blue-600 hover:underline transition-all">View All
-                    Vendors</a></li>
-            <li><a href="{% url 'import_data' %}" class="text-blue-600 hover:underline transition-all">Import Data</a>
-            </li>
-        </ul>
+    <div class="bg-white p-4 rounded shadow">
+        <h2 class="text-lg font-semibold mb-2">Spend by Year</h2>
+        <canvas id="spend-chart"></canvas>
+    </div>
+    <div class="bg-white p-4 rounded shadow">
+        <h2 class="text-lg font-semibold mb-2">Spend by Relationship Type</h2>
+        <canvas id="relationship-chart"></canvas>
+    </div>
+    <div class="bg-white p-4 rounded shadow">
+        <h2 class="text-lg font-semibold mb-2">Contract Type Distribution</h2>
+        <canvas id="contract-chart"></canvas>
+    </div>
+    <div class="bg-white p-4 rounded shadow">
+        <h2 class="text-lg font-semibold mb-2">Geographical Distribution</h2>
+        <canvas id="geo-chart"></canvas>
+    </div>
+    <div class="bg-white p-4 rounded shadow">
+        <h2 class="text-lg font-semibold mb-2">Vendor Performance</h2>
+        <p>Average Rating: <span id="avg-rating">Loading...</span></p>
+        <p>Average Discount: <span id="avg-discount">Loading...</span></p>
     </div>
 </div>
 
-<div class="bg-white rounded-lg shadow-md p-6 transition-all hover:shadow-lg">
-    <h2 class="text-xl font-semibold mb-4 text-navy">Recent Activity</h2>
-    <table class="min-w-full divide-y divide-gray-200">
-        <thead class="bg-gray-50">
-            <tr>
-                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Date</th>
-                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Action</th>
-                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Details</th>
-            </tr>
-        </thead>
-        <tbody class="bg-white divide-y divide-gray-200">
-            {% for activity in recent_activities %}
-            <tr class="hover:bg-gray-50 transition-all">
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ activity.date|date:"Y-m-d H:i" }}</td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ activity.action }}</td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ activity.details }}</td>
-            </tr>
-            {% empty %}
-            <tr>
-                <td colspan="3" class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-center">No recent activity
-                </td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
+<div class="bg-white p-4 rounded shadow mb-8">
+    <h2 class="text-lg font-semibold mb-2">Recent Activity</h2>
+    <ul>
+        {% for activity in recent_activities %}
+        <li>{{ activity.date|date:"Y-m-d H:i" }} - {{ activity.action }} - {{ activity.details }}</li>
+        {% endfor %}
+    </ul>
 </div>
+
+<button id="export-btn" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
+    Export Dashboard Data
+</button>
 {% endblock %}
 
 {% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
     document.addEventListener('DOMContentLoaded', function () {
-        const userMenu = document.getElementById('user-menu');
-        const menuItems = ['Profile', 'Settings', 'Sign out'];
+        fetch('/api/dashboard-data/')
+            .then(response => response.json())
+            .then(data => {
+                updateDashboard(data);
+            });
 
-        // Chart.js initialization
-        var ctx = document.getElementById('topVendorsChart').getContext('2d');
-        var chart = new Chart(ctx, {
-            type: 'bar',
-            data: {
-                labels: [{% for vendor in top_vendors %}'{{ vendor.vendor_name }}',{% endfor %}],
-        datasets: [{
-            label: 'Total Spend',
-            data: [{% for vendor in top_vendors %}{{ vendor.total_spend }}, {% endfor %}],
-        backgroundColor: [
-        'rgba(255, 99, 132, 0.8)',
-        'rgba(54, 162, 235, 0.8)',
-        'rgba(255, 206, 86, 0.8)',
-        'rgba(75, 192, 192, 0.8)',
-        'rgba(153, 102, 255, 0.8)'
-    ]
-                }]
-            },
-        options: {
-        responsive: true,
-        scales: {
-            y: {
-                beginAtZero: true,
-                title: {
-                    display: true,
-                    text: 'Total Spend ($)'
+        function updateDashboard(data) {
+            console.log('Received dashboard data:', data);
+
+            function updateElement(id, value) {
+                const element = document.getElementById(id);
+                if (element) {
+                    element.textContent = value;
+                } else {
+                    console.error(`Element with id '${id}' not found`);
                 }
             }
-        },
-        plugins: {
-            legend: {
-                display: false
-            },
-            tooltip: {
-                callbacks: {
-                    label: function (context) {
-                        let label = context.dataset.label || '';
-                        if (label) {
-                            label += ': ';
+
+            function createChart(canvasId, type, data, labelKey, valueKey) {
+                const canvas = document.getElementById(canvasId);
+                if (!canvas) {
+                    console.error(`Canvas with id '${canvasId}' not found`);
+                    return;
+                }
+
+                new Chart(canvas, {
+                    type: type,
+                    data: {
+                        labels: data.map(item => item[labelKey]),
+                        datasets: [{
+                            data: data.map(item => item[valueKey]),
+                            backgroundColor: [
+                                'rgba(255, 99, 132, 0.8)',
+                                'rgba(54, 162, 235, 0.8)',
+                                'rgba(255, 206, 86, 0.8)',
+                                'rgba(75, 192, 192, 0.8)',
+                                'rgba(153, 102, 255, 0.8)',
+                            ],
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: {
+                            legend: {
+                                position: 'top',
+                            },
+                            title: {
+                                display: true,
+                                text: canvasId.replace('-', ' ').toUpperCase()
+                            }
                         }
-                        if (context.parsed.y !== null) {
-                            label += new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(context.parsed.y);
-                        }
-                        return label;
                     }
-                }
+                });
             }
+
+            // Update high risk vendors count
+            updateElement('high-risk-vendors', data.high_risk_vendors);
+
+            // Calculate and update total spend
+            const totalSpend = data.spend_by_year.reduce((sum, year) => sum + parseFloat(year.total_spend), 0);
+            updateElement('total-spend', data.total_spend);
+
+            // Update vendor performance
+            if (data.vendor_performance) {
+                updateElement('avg-rating', parseFloat(data.vendor_performance.avg_rating).toFixed(2));
+                updateElement('avg-discount', parseFloat(data.vendor_performance.avg_discount).toFixed(2) + '%');
+            } else {
+                console.error('Vendor performance data is missing');
+            }
+
+            // Create charts
+            createChart('risk-chart', 'pie', data.risk_distribution, 'risk_level', 'count');
+            createChart('spend-chart', 'line', data.spend_by_year, 'year', 'total_spend');
+            createChart('relationship-chart', 'bar', data.spend_by_relationship, 'relationship_type', 'total_spend');
+            createChart('contract-chart', 'pie', data.contract_distribution, 'contract_type', 'count');
+
+            // For geographical distribution, we'll limit to top 10 countries for better visualization
+            const topCountries = data.geographical_distribution
+                .sort((a, b) => b.count - a.count)
+                .slice(0, 10);
+            createChart('geo-chart', 'bar', topCountries, 'country', 'count');
+
+            // Update any additional elements or charts here
+
+            console.log('Dashboard update completed');
         }
-    }
+
+        // Export functionality
+        document.getElementById('export-btn').addEventListener('click', function () {
+            fetch('/api/dashboard-data/')
+                .then(response => response.json())
+                .then(data => {
+                    let csv = 'data:text/csv;charset=utf-8,';
+                    // Add headers
+                    csv += 'Category,Subcategory,Value\n';
+
+                    // Add data
+                    for (let key in data) {
+                        if (Array.isArray(data[key])) {
+                            data[key].forEach(item => {
+                                csv += `${key},${Object.values(item).join(',')}\n`;
+                            });
+                        } else if (typeof data[key] === 'object') {
+                            for (let subKey in data[key]) {
+                                csv += `${key},${subKey},${data[key][subKey]}\n`;
+                            }
+                        } else {
+                            csv += `${key},,${data[key]}\n`;
+                        }
+                    }
+
+                    // Create download link
+                    var encodedUri = encodeURI(csv);
+                    var link = document.createElement("a");
+                    link.setAttribute("href", encodedUri);
+                    link.setAttribute("download", "dashboard_data.csv");
+                    document.body.appendChild(link);
+                    link.click();
+                });
         });
-
-    // Guided Tour
-    const tour = new Shepherd.Tour({
-        defaultStepOptions: {
-            cancelIcon: {
-                enabled: true
-            },
-            classes: 'shadow-md bg-purple-dark',
-            scrollTo: { behavior: 'smooth', block: 'center' }
-        }
-    });
-
-    tour.addStep({
-        id: 'welcome',
-        text: 'Welcome to the Vendor Management Dashboard! Let\'s take a quick tour.',
-        attachTo: {
-            element: '.dashboard-header',
-            on: 'bottom'
-        },
-        buttons: [
-            {
-                text: 'Next',
-                action: tour.next
-            }
-        ]
-    });
-
-    tour.addStep({
-        id: 'metrics',
-        text: 'Here you can see key metrics at a glance.',
-        attachTo: {
-            element: '.metrics-grid',
-            on: 'bottom'
-        },
-        buttons: [
-            {
-                text: 'Back',
-                action: tour.back
-            },
-            {
-                text: 'Next',
-                action: tour.next
-            }
-        ]
-    });
-
-    tour.addStep({
-        id: 'top-vendors',
-        text: 'This chart shows the top 5 vendors by total spend.',
-        attachTo: {
-            element: '#topVendorsChart',
-            on: 'bottom'
-        },
-        buttons: [
-            {
-                text: 'Back',
-                action: tour.back
-            },
-            {
-                text: 'Next',
-                action: tour.next
-            }
-        ]
-    });
-
-    tour.addStep({
-        id: 'recent-activity',
-        text: 'Here you can see recent activities in the system.',
-        attachTo: {
-            element: 'table',
-            on: 'top'
-        },
-        buttons: [
-            {
-                text: 'Back',
-                action: tour.back
-            },
-            {
-                text: 'Done',
-                action: tour.complete
-            }
-        ]
-    });
-
-    // Start the tour
-    if (!localStorage.getItem('tourCompleted')) {
-        tour.start();
-        localStorage.setItem('tourCompleted', 'true');
-    }
     });
 </script>
 {% endblock %}

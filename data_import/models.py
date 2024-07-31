@@ -23,3 +23,7 @@ class VendorImport(models.Model):
     credit_limit = models.DecimalField(max_digits=10, decimal_places=2)
     contract_year = models.IntegerField()
     relationship_type = models.CharField(max_length=50)
+    contract_type = models.CharField(max_length=10, default="FIXED")  # Add this line
+
+    def __str__(self):
+        return f"{self.vendor} ({self.vendor_id})"

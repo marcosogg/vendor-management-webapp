@@ -1,3 +1,5 @@
+# data_import/import_handlers.py
+
 import pandas as pd
 from django.db import transaction
 from core.models import Vendor, Part, Spend, Risk
@@ -41,9 +43,13 @@ def import_discount(df):
         )
 
     for discount_import in DiscountImport.objects.all():
-        Part.objects.filter(part_number=discount_import.part_number).update(
-            discount=discount_import.discount
-        )
+        part = Part.objects.filter(part_number=discount_import.part_number).first()
+        if part:
+            part.discount = discount_import.discount
+            part.save()
+            part.vendor.update_performance_metrics()
+        else:
+            print(f"Warning: No part found with number {discount_import.part_number}")
 
     DiscountImport.objects.all().delete()
 
@@ -68,7 +74,9 @@ def import_spend(df):
                 spend, created = Spend.objects.update_or_create(
                     vendor=vendor,
                     year=spend_import.year,
-                    defaults={"usd_amount": spend_import.usd_amount},
+                    defaults={
+                        "usd_amount": spend_import.usd_amount,
+                    },
                 )
                 if created:
                     print(
@@ -79,8 +87,9 @@ def import_spend(df):
                         f"Updated existing Spend entry for vendor {vendor.vendor_name} in year {spend_import.year}"
                     )
 
-                # Update risk assessment after spend import
+                # Update risk assessment and performance metrics after spend import
                 update_vendor_risk(vendor)
+                vendor.update_performance_metrics()
             except IntegrityError as e:
                 print(f"Error creating/updating Spend entry: {str(e)}")
         else:
@@ -101,6 +110,7 @@ def import_vendors(df):
         "contract_year",
         "relationship_type",
     ]
+    # Remove "contract_type" from the required columns list
     missing_columns = [col for col in required_columns if col not in df.columns]
     if missing_columns:
         raise ValueError(
@@ -108,39 +118,32 @@ def import_vendors(df):
         )
 
     for _, row in df.iterrows():
-        VendorImport.objects.create(
-            part_number=row["part_number"],
+        vendor, created = Vendor.objects.update_or_create(
             vendor_id=row["vendor_id"],
-            vendor=row["vendor"],
-            buyer=row["buyer"],
-            payment_terms=row["payment_terms"],
-            credit_limit=row["credit_limit"],
-            contract_year=row["contract_year"],
-            relationship_type=row["relationship_type"],
-        )
-
-    for vendor_import in VendorImport.objects.all():
-        vendor, _ = Vendor.objects.update_or_create(
-            vendor_id=vendor_import.vendor_id,
             defaults={
-                "vendor_name": vendor_import.vendor,
-                "payment_terms": vendor_import.payment_terms,
-                "credit_limit": vendor_import.credit_limit,
-                "contract_year": vendor_import.contract_year,
-                "relationship_type": vendor_import.relationship_type,
+                "vendor_name": row["vendor"],
+                "payment_terms": str(row["payment_terms"]),  # Convert to string
+                "credit_limit": row["credit_limit"],
+                "contract_year": row["contract_year"],
+                "relationship_type": row["relationship_type"],
+                "contract_type": "Direct",  # Set a default value
+                "country": row["part_number"].split("-")[
+                    2
+                ],  # Extract country from part number
             },
         )
 
         Part.objects.update_or_create(
-            part_number=vendor_import.part_number,
+            part_number=row["part_number"],
             defaults={
                 "vendor": vendor,
-                "buyer": vendor_import.buyer,
+                "buyer": row["buyer"],
                 "discount": 0,  # Default value, will be updated by discount import
             },
         )
 
-        # Update risk assessment
+        # Update risk assessment and performance metrics
         update_vendor_risk(vendor)
+        vendor.update_performance_metrics()
 
     VendorImport.objects.all().delete()

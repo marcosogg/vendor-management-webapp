@@ -1,12 +1,38 @@
 from django.db import models
+from django.db.models import Avg, Sum
+from django.utils import timezone
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.contrib.auth.models import User
 
 
 class Vendor(models.Model):
+    RELATIONSHIP_TYPE_CHOICES = [
+        ("DIRECT", "Direct"),
+        ("THIRD PARTY", "Third Party"),
+    ]
+
+    CONTRACT_TYPE_CHOICES = [
+        ("FIXED", "Fixed Price"),
+        ("TIME", "Time and Materials"),
+        ("COST", "Cost Plus"),
+    ]
+
     vendor_name = models.CharField(max_length=200)
     vendor_id = models.CharField(max_length=50, unique=True)
     payment_terms = models.CharField(max_length=100)
+    country = models.CharField(max_length=2, blank=True, null=True)
+    average_discount = models.DecimalField(max_digits=5, decimal_places=2, default=0)
+    contract_type = models.CharField(
+        max_length=10,
+        choices=CONTRACT_TYPE_CHOICES,
+        default="FIXED",
+    )
+    rating = models.DecimalField(
+        max_digits=3,
+        decimal_places=2,
+        default=0,
+        validators=[MinValueValidator(0), MaxValueValidator(5)],
+    )
     credit_limit = models.DecimalField(
         max_digits=10, decimal_places=2, validators=[MinValueValidator(0)]
     )
@@ -15,13 +41,34 @@ class Vendor(models.Model):
     )
     relationship_type = models.CharField(
         max_length=50,
-        choices=[
-            ("DIRECT", "Direct"),
-            ("THIRD PARTY", "Third Party"),
-        ],
+        choices=RELATIONSHIP_TYPE_CHOICES,
     )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+
+    def save(self, *args, **kwargs):
+        self.payment_terms = str(self.payment_terms)
+        super().save(*args, **kwargs)
+
+    def update_performance_metrics(self):
+        # Update average discount
+        avg_discount = self.parts.aggregate(Avg("discount"))["discount__avg"]
+        self.average_discount = avg_discount if avg_discount is not None else 0
+
+        # Update rating based on spend
+        current_year = timezone.now().year
+        total_spend = self.spends.filter(year=current_year).aggregate(
+            Sum("usd_amount")
+        )["usd_amount__sum"]
+        if total_spend:
+            # This is a simple rating calculation, you might want to adjust it based on your specific requirements
+            self.rating = min(
+                5, total_spend / 1000000
+            )  # 1 point for every million spent, max 5
+        else:
+            self.rating = 0
+
+        self.save()
 
     def __str__(self):
         return f"{self.vendor_name} ({self.vendor_id})"
@@ -51,11 +98,24 @@ class Spend(models.Model):
     usd_amount = models.DecimalField(
         max_digits=12, decimal_places=2, validators=[MinValueValidator(0)]
     )
+    relationship_type = models.CharField(
+        max_length=50,
+        choices=Vendor.RELATIONSHIP_TYPE_CHOICES,
+        default="DIRECT",
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         unique_together = ["vendor", "year"]
+
+    def __str__(self):
+        return f"{self.vendor.vendor_name} - {self.year}: ${self.usd_amount}"
+
+    def save(self, *args, **kwargs):
+        # Ensure relationship_type matches the vendor's relationship_type
+        self.relationship_type = self.vendor.relationship_type
+        super().save(*args, **kwargs)
 
 
 class Risk(models.Model):

@@ -34,11 +34,15 @@ def calculate_risk_score(vendor):
 
 
 def calculate_payment_terms_score(payment_terms):
+    payment_terms = str(payment_terms)  # Ensure payment_terms is a string
     if payment_terms == "PPAY":
         return 0
     elif payment_terms.startswith("Net "):
-        days = int(payment_terms.split()[1])
-        return 35 if days >= 30 else 5
+        try:
+            days = int(payment_terms.split()[1])
+            return 35 if days >= 30 else 5
+        except (IndexError, ValueError):
+            return 5  # Default to low score if we can't parse the number
     else:
         return 5  # Default to low score for unknown terms
 
