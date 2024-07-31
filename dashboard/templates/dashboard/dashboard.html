@@ -124,14 +124,9 @@
                 });
             }
 
-            // Update high risk vendors count
             updateElement('high-risk-vendors', data.high_risk_vendors);
-
-            // Calculate and update total spend
-            const totalSpend = data.spend_by_year.reduce((sum, year) => sum + parseFloat(year.total_spend), 0);
             updateElement('total-spend', data.total_spend);
 
-            // Update vendor performance
             if (data.vendor_performance) {
                 updateElement('avg-rating', parseFloat(data.vendor_performance.avg_rating).toFixed(2));
                 updateElement('avg-discount', parseFloat(data.vendor_performance.avg_discount).toFixed(2) + '%');
@@ -139,33 +134,26 @@
                 console.error('Vendor performance data is missing');
             }
 
-            // Create charts
             createChart('risk-chart', 'pie', data.risk_distribution, 'risk_level', 'count');
             createChart('spend-chart', 'line', data.spend_by_year, 'year', 'total_spend');
             createChart('relationship-chart', 'bar', data.spend_by_relationship, 'relationship_type', 'total_spend');
             createChart('contract-chart', 'pie', data.contract_distribution, 'contract_type', 'count');
 
-            // For geographical distribution, we'll limit to top 10 countries for better visualization
             const topCountries = data.geographical_distribution
                 .sort((a, b) => b.count - a.count)
                 .slice(0, 10);
             createChart('geo-chart', 'bar', topCountries, 'country', 'count');
 
-            // Update any additional elements or charts here
-
             console.log('Dashboard update completed');
         }
 
-        // Export functionality
         document.getElementById('export-btn').addEventListener('click', function () {
             fetch('/api/dashboard-data/')
                 .then(response => response.json())
                 .then(data => {
                     let csv = 'data:text/csv;charset=utf-8,';
-                    // Add headers
                     csv += 'Category,Subcategory,Value\n';
 
-                    // Add data
                     for (let key in data) {
                         if (Array.isArray(data[key])) {
                             data[key].forEach(item => {
@@ -180,7 +168,6 @@
                         }
                     }
 
-                    // Create download link
                     var encodedUri = encodeURI(csv);
                     var link = document.createElement("a");
                     link.setAttribute("href", encodedUri);

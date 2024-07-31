@@ -19,13 +19,13 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import path, include
 from django.contrib.auth import views as auth_views
-from django.views.generic import RedirectView
 from django.conf import settings
 from django.conf.urls.static import static
 
 urlpatterns = [
     path("admin/", admin.site.urls),
-    path("", include("core.urls")),
+    path("", include("dashboard.urls")),  # Change this line
+    path("vendors/", include("core.urls")),
     path("import/", include("data_import.urls")),
     path("accounts/login/", auth_views.LoginView.as_view(), name="login"),
     path(

@@ -42,6 +42,7 @@ INSTALLED_APPS = [
     "theme",
     "core",
     "data_import",
+    "dashboard",
 ]
 
 MIDDLEWARE = [

@@ -47,13 +47,9 @@
             </p>
             <p class="mb-2">Total Score: {{ risk.total_score }}</p>
             <h3 class="text-lg font-semibold mt-4 mb-2">Score Breakdown:</h3>
-            <ul class="list-disc list-inside">
-                <li>Payment Terms: {{ risk.payment_terms_score }} / 35</li>
-                <li>Spend: {{ risk.spend_score }} / 25</li>
-                <li>Average Discount: {{ risk.average_discount_score }} / 15</li>
-                <li>Contract: {{ risk.contract_score }} / 15</li>
-                <li>Relationship Type: {{ risk.relationship_type_score }} / 10</li>
-            </ul>
+            <div class="h-48">
+                <canvas id="riskChart"></canvas>
+            </div>
             <p class="text-sm text-gray-500 mt-4">Last updated: {{ risk.last_updated|date:"F d, Y H:i" }}</p>
         </div>
 
@@ -119,6 +115,41 @@
             </div>
         </div>
 
+        <!-- Rank by Spend Card -->
+        <div class="bg-white shadow-md rounded-lg p-6">
+            <h2 class="text-xl font-semibold mb-4 text-navy">Rank by Spend</h2>
+            <table class="min-w-full">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Year
+                        </th>
+                        <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Rank
+                        </th>
+                        <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total
+                            Vendors</th>
+                        <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Spend
+                        </th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+                    {% for data in rank_data %}
+                    <tr>
+                        <td class="px-4 py-2 whitespace-nowrap">{{ data.year }}</td>
+                        <td class="px-4 py-2 whitespace-nowrap">
+                            {% if data.rank %}
+                            {{ data.rank }} of {{ data.total_vendors }}
+                            {% else %}
+                            N/A
+                            {% endif %}
+                        </td>
+                        <td class="px-4 py-2 whitespace-nowrap">{{ data.total_vendors }}</td>
+                        <td class="px-4 py-2 whitespace-nowrap">${{ data.spend|floatformat:2 }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
         <!-- Spend History Chart -->
         <div class="bg-white shadow-md rounded-lg p-6">
             <h2 class="text-xl font-semibold mb-4 text-navy">Spend History Chart</h2>
@@ -135,73 +166,118 @@
 {% endblock %}
 
 {% block extra_js %}
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
     document.addEventListener('DOMContentLoaded', function () {
-        // Prepare data for charts
-        var spendData = {
-            labels: [{% for spend in spends %}"{{ spend.year }}"{% if not forloop.last %}, {% endif %} {% endfor %}],
-        data: [{% for spend in spends %}{{ spend.usd_amount }}{% if not forloop.last %}, {% endif %} {% endfor %}]
-        };
-
-    var partsData = {
-        labels: [{% for part in parts %}"{{ part.part_number }}"{% if not forloop.last %}, {% endif %} {% endfor %}],
-    data: [{% for part in parts %}1{% if not forloop.last %}, {% endif %} {% endfor %}]
-        };
+        // Risk Assessment Chart
+        var riskCtx = document.getElementById('riskChart').getContext('2d');
+        new Chart(riskCtx, {
+            type: 'bar',
+            data: {
+                labels: ['Risk Factors'],
+                datasets: [{
+                    label: 'Payment Terms',
+                    data: [{{ risk.payment_terms_score }}],
+                backgroundColor: 'rgba(255, 99, 132, 0.8)',
+            }, {
+            label: 'Spend',
+            data: [{{ risk.spend_score }}],
+            backgroundColor: 'rgba(54, 162, 235, 0.8)',
+                }, {
+        label: 'Average Discount',
+        data: [{{ risk.average_discount_score }}],
+        backgroundColor: 'rgba(255, 206, 86, 0.8)',
+                }, {
+            label: 'Contract',
+            data: [{{ risk.contract_score }}],
+        backgroundColor: 'rgba(75, 192, 192, 0.8)',
+                }, {
+            label: 'Relationship Type',
+            data: [{{ risk.relationship_type_score }}],
+        backgroundColor: 'rgba(153, 102, 255, 0.8)',
+                }]
+            },
+        options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+            x: {
+                stacked: true,
+            },
+            y: {
+                stacked: true,
+                beginAtZero: true,
+                max: 100,
+                title: {
+                    display: true,
+                    text: 'Risk Score'
+                }
+            }
+        },
+        plugins: {
+            legend: {
+                position: 'top',
+            },
+            title: {
+                display: true,
+                text: 'Risk Factor Distribution'
+            }
+        }
+    }
+        });
 
     // Spend History Chart
     var spendCtx = document.getElementById('spendChart').getContext('2d');
     new Chart(spendCtx, {
         type: 'line',
         data: {
-            labels: spendData.labels,
-            datasets: [{
-                label: 'Spend Amount',
-                data: spendData.data,
-                borderColor: 'rgb(75, 192, 192)',
-                tension: 0.1
-            }]
-        },
-        options: {
-            responsive: true,
+            labels: [{% for spend in spends %}"{{ spend.year }}"{% if not forloop.last %}, {% endif %}{% endfor %}],
+        datasets: [{
+            label: 'Spend Amount',
+            data: [{% for spend in spends %}{{ spend.usd_amount }}{% if not forloop.last %}, {% endif %} {% endfor %}],
+    borderColor: 'rgb(75, 192, 192)',
+        tension: 0.1
+                }]
+            },
+    options: {
+        responsive: true,
             scales: {
-                y: {
-                    beginAtZero: true,
+            y: {
+                beginAtZero: true,
                     title: {
-                        display: true,
+                    display: true,
                         text: 'USD Amount'
-                    }
                 }
             }
         }
-    });
+    }
+        });
 
     // Parts Distribution Chart
     var partsCtx = document.getElementById('partsChart').getContext('2d');
     new Chart(partsCtx, {
         type: 'pie',
         data: {
-            labels: partsData.labels,
-            datasets: [{
-                data: partsData.data,
-                backgroundColor: [
-                    'rgba(255, 99, 132, 0.8)',
-                    'rgba(54, 162, 235, 0.8)',
-                    'rgba(255, 206, 86, 0.8)',
-                    'rgba(75, 192, 192, 0.8)',
-                    'rgba(153, 102, 255, 0.8)',
-                ]
-            }]
-        },
-        options: {
-            responsive: true,
+            labels: [{% for part in parts %}"{{ part.part_number }}"{% if not forloop.last %}, {% endif %}{% endfor %}],
+        datasets: [{
+            data: [{% for part in parts %}1{% if not forloop.last %}, {% endif %} {% endfor %}],
+    backgroundColor: [
+        'rgba(255, 99, 132, 0.8)',
+        'rgba(54, 162, 235, 0.8)',
+        'rgba(255, 206, 86, 0.8)',
+        'rgba(75, 192, 192, 0.8)',
+        'rgba(153, 102, 255, 0.8)',
+    ]
+                }]
+            },
+    options: {
+        responsive: true,
             plugins: {
-                legend: {
-                    position: 'right'
-                }
+            legend: {
+                position: 'right'
             }
         }
-    });
+    }
+        });
     });
 </script>
 {% endblock %}

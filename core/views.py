@@ -1,73 +1,23 @@
 from django.http import JsonResponse
-from django.views.generic import ListView, DetailView, TemplateView
+from django.views.generic import ListView, DetailView
 from django.views.generic.edit import CreateView, UpdateView
 from django.db.models import Sum, Count, Q, Avg
 from django.urls import reverse_lazy, reverse
 from django.utils.decorators import method_decorator
-from django.views.decorators.cache import cache_page
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.decorators import login_required
-from django.utils.html import escape
-from django.core.exceptions import ValidationError
-from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.shortcuts import render
 from django.contrib import messages
 from .models import Vendor, Part, Spend, Risk, Activity
 from .forms import VendorForm
 from .utils import log_error
+from django.views.generic import DetailView
+from django.db.models.functions import Rank
+from django.utils import timezone
 
 import logging
-import math
 
 logger = logging.getLogger(__name__)
-
-
-@method_decorator(login_required, name="dispatch")
-class DashboardView(LoginRequiredMixin, TemplateView):
-    template_name = "core/dashboard.html"
-
-    @log_error
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-
-        # Total vendors and parts
-        context["total_vendors"] = Vendor.objects.count()
-        context["total_parts"] = Part.objects.count()
-
-        # Total spend
-        total_spend = Spend.objects.aggregate(total=Sum("usd_amount"))["total"] or 0
-        context["total_spend"] = self.format_currency(total_spend)
-
-        # Average risk score
-        avg_risk_score = (
-            Risk.objects.aggregate(Avg("total_score"))["total_score__avg"] or 0
-        )
-        context["avg_risk_score"] = round(avg_risk_score, 2)
-
-        # High risk vendors
-        context["high_risk_vendors"] = Vendor.objects.filter(
-            risk__risk_level="HIGH"
-        ).count()
-
-        # Top vendors by spend
-        context["top_vendors"] = Vendor.objects.annotate(
-            total_spend=Sum("spends__usd_amount")
-        ).order_by("-total_spend")[:5]
-
-        # Recent activities
-        context["recent_activities"] = Activity.objects.all().order_by("-date")[:10]
-
-        return context
-
-    def format_currency(self, amount):
-        if amount >= 1_000_000_000:
-            return f"${amount / 1_000_000_000:.2f}B"
-        elif amount >= 1_000_000:
-            return f"${amount / 1_000_000:.2f}M"
-        elif amount >= 1_000:
-            return f"${amount / 1_000:.2f}K"
-        else:
-            return f"${amount:,.2f}"
 
 
 class VendorListView(LoginRequiredMixin, ListView):
@@ -150,6 +100,40 @@ class VendorProfileView(LoginRequiredMixin, DetailView):
                 self.request,
                 f"Warning: {vendor.vendor_name} is classified as a high-risk vendor.",
             )
+
+        # Calculate rank by spend for the past 4 years
+        current_year = timezone.now().year
+        rank_data = []
+        for year in range(current_year - 3, current_year + 1):
+            # Get all spends for the year
+            year_spends = (
+                Spend.objects.filter(year=year)
+                .values("vendor")
+                .annotate(total_spend=Sum("usd_amount"))
+                .order_by("-total_spend")
+            )
+
+            # Calculate ranks
+            spend_dict = {item["vendor"]: item["total_spend"] for item in year_spends}
+            sorted_vendors = sorted(spend_dict, key=spend_dict.get, reverse=True)
+            ranks = {
+                vendor_id: rank + 1 for rank, vendor_id in enumerate(sorted_vendors)
+            }
+
+            # Get this vendor's rank and spend
+            vendor_spend = spend_dict.get(vendor.id, 0)
+            vendor_rank = ranks.get(vendor.id, None)
+
+            rank_data.append(
+                {
+                    "year": year,
+                    "rank": vendor_rank,
+                    "total_vendors": len(year_spends),
+                    "spend": vendor_spend,
+                }
+            )
+
+        context["rank_data"] = rank_data
 
         return context
 
@@ -248,89 +232,6 @@ def format_currency(amount):
         return f"${amount / 1_000:.2f}K"
     else:
         return f"${amount:,.2f}"
-
-
-def dashboard_data(request):
-    try:
-        # Fetch and calculate all required data
-        risk_distribution = list(
-            Risk.objects.values("risk_level").annotate(count=Count("risk_level"))
-        )
-
-        spend_by_year = list(
-            Spend.objects.values("year").annotate(total_spend=Sum("usd_amount"))
-        )
-        total_spend = sum(
-            item["total_spend"] for item in spend_by_year if item["total_spend"]
-        )
-
-        spend_by_relationship = list(
-            Spend.objects.values("relationship_type").annotate(
-                total_spend=Sum("usd_amount")
-            )
-        )
-
-        vendor_performance = Vendor.objects.aggregate(
-            avg_rating=Avg("rating"), avg_discount=Avg("average_discount")
-        )
-
-        contract_distribution = list(
-            Vendor.objects.values("contract_type").annotate(
-                count=Count("contract_type")
-            )
-        )
-
-        geographical_distribution = list(
-            Vendor.objects.values("country").annotate(count=Count("country"))
-        )
-
-        high_risk_vendors = Vendor.objects.filter(risk__risk_level="HIGH").count()
-
-        data = {
-            "risk_distribution": list(
-                Risk.objects.values("risk_level").annotate(count=Count("risk_level"))
-            ),
-            "total_spend": format_currency(total_spend),
-            "spend_by_year": list(
-                Spend.objects.values("year").annotate(total_spend=Sum("usd_amount"))
-            ),
-            "spend_by_relationship": list(
-                Spend.objects.values("relationship_type").annotate(
-                    total_spend=Sum("usd_amount")
-                )
-            ),
-            "vendor_performance": Vendor.objects.aggregate(
-                avg_rating=Avg("rating"), avg_discount=Avg("average_discount")
-            ),
-            "contract_distribution": list(
-                Vendor.objects.values("contract_type").annotate(
-                    count=Count("contract_type")
-                )
-            ),
-            "geographical_distribution": list(
-                Vendor.objects.values("country").annotate(count=Count("country"))
-            ),
-            "high_risk_vendors": Vendor.objects.filter(risk__risk_level="HIGH").count(),
-        }
-        logger.info(f"Dashboard data: {data}")
-        return JsonResponse(data)
-    except Exception as e:
-        logger.error(f"Error fetching dashboard data: {str(e)}")
-        return JsonResponse(
-            {"error": "An error occurred while fetching dashboard data"}, status=500
-        )
-
-
-def dashboard(request):
-    context = {
-        "total_vendors": Vendor.objects.count(),
-        "total_spend": Spend.objects.aggregate(total=Sum("usd_amount"))["total"],
-        "avg_risk_score": Risk.objects.aggregate(avg_score=Avg("total_score"))[
-            "avg_score"
-        ],
-        "recent_activities": Activity.objects.all().order_by("-date")[:10],
-    }
-    return render(request, "core/dashboard.html", context)
 
 
 def risk_distribution(request):

@@ -103,6 +103,7 @@ class Spend(models.Model):
         choices=Vendor.RELATIONSHIP_TYPE_CHOICES,
         default="DIRECT",
     )
+    rank = models.IntegerField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
