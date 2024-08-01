@@ -69,14 +69,23 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
     document.addEventListener('DOMContentLoaded', function () {
-        fetch('/api/dashboard-data/')
-            .then(response => response.json())
+        fetch('/dashboard/api/dashboard-data/')
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return response.json();
+            })
             .then(data => {
+                console.log('Received dashboard data:', data);
                 updateDashboard(data);
+            })
+            .catch(error => {
+                console.error('Error fetching dashboard data:', error);
             });
 
         function updateDashboard(data) {
-            console.log('Received dashboard data:', data);
+            console.log('Updating dashboard with data:', data);
 
             function updateElement(id, value) {
                 const element = document.getElementById(id);
@@ -94,61 +103,98 @@
                     return;
                 }
 
-                new Chart(canvas, {
-                    type: type,
-                    data: {
-                        labels: data.map(item => item[labelKey]),
-                        datasets: [{
-                            data: data.map(item => item[valueKey]),
-                            backgroundColor: [
-                                'rgba(255, 99, 132, 0.8)',
-                                'rgba(54, 162, 235, 0.8)',
-                                'rgba(255, 206, 86, 0.8)',
-                                'rgba(75, 192, 192, 0.8)',
-                                'rgba(153, 102, 255, 0.8)',
-                            ],
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        plugins: {
-                            legend: {
-                                position: 'top',
-                            },
-                            title: {
-                                display: true,
-                                text: canvasId.replace('-', ' ').toUpperCase()
+                if (!data || data.length === 0) {
+                    console.error(`No data available for chart '${canvasId}'`);
+                    return;
+                }
+
+                console.log(`Creating chart for '${canvasId}' with data:`, data);
+
+                try {
+                    new Chart(canvas, {
+                        type: type,
+                        data: {
+                            labels: data.map(item => item[labelKey]),
+                            datasets: [{
+                                data: data.map(item => item[valueKey]),
+                                backgroundColor: [
+                                    'rgba(255, 99, 132, 0.8)',
+                                    'rgba(54, 162, 235, 0.8)',
+                                    'rgba(255, 206, 86, 0.8)',
+                                    'rgba(75, 192, 192, 0.8)',
+                                    'rgba(153, 102, 255, 0.8)',
+                                ],
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            plugins: {
+                                legend: {
+                                    position: 'top',
+                                },
+                                title: {
+                                    display: true,
+                                    text: canvasId.replace('-', ' ').toUpperCase()
+                                }
                             }
                         }
-                    }
-                });
+                    });
+                    console.log(`Chart '${canvasId}' created successfully`);
+                } catch (error) {
+                    console.error(`Error creating chart '${canvasId}':`, error);
+                }
             }
 
-            updateElement('high-risk-vendors', data.high_risk_vendors);
-            updateElement('total-spend', data.total_spend);
+            updateElement('high-risk-vendors', data.high_risk_vendors || 'N/A');
+            updateElement('total-spend', data.total_spend || 'N/A');
 
             if (data.vendor_performance) {
-                updateElement('avg-rating', parseFloat(data.vendor_performance.avg_rating).toFixed(2));
-                updateElement('avg-discount', parseFloat(data.vendor_performance.avg_discount).toFixed(2) + '%');
+                updateElement('avg-rating', parseFloat(data.vendor_performance.avg_rating || 0).toFixed(2));
+                updateElement('avg-discount', parseFloat(data.vendor_performance.avg_discount || 0).toFixed(2) + '%');
             } else {
                 console.error('Vendor performance data is missing');
+                updateElement('avg-rating', 'N/A');
+                updateElement('avg-discount', 'N/A');
             }
 
-            createChart('risk-chart', 'pie', data.risk_distribution, 'risk_level', 'count');
-            createChart('spend-chart', 'line', data.spend_by_year, 'year', 'total_spend');
-            createChart('relationship-chart', 'bar', data.spend_by_relationship, 'relationship_type', 'total_spend');
-            createChart('contract-chart', 'pie', data.contract_distribution, 'contract_type', 'count');
+            if (data.risk_distribution) {
+                createChart('risk-chart', 'pie', data.risk_distribution, 'risk_level', 'count');
+            } else {
+                console.error('Risk distribution data is missing');
+            }
 
-            const topCountries = data.geographical_distribution
-                .sort((a, b) => b.count - a.count)
-                .slice(0, 10);
-            createChart('geo-chart', 'bar', topCountries, 'country', 'count');
+            if (data.spend_by_year) {
+                createChart('spend-chart', 'line', data.spend_by_year, 'year', 'total_spend');
+            } else {
+                console.error('Spend by year data is missing');
+            }
+
+            if (data.spend_by_relationship) {
+                createChart('relationship-chart', 'bar', data.spend_by_relationship, 'relationship_type', 'total_spend');
+            } else {
+                console.error('Spend by relationship data is missing');
+            }
+
+            if (data.contract_distribution) {
+                createChart('contract-chart', 'pie', data.contract_distribution, 'contract_type', 'count');
+            } else {
+                console.error('Contract distribution data is missing');
+            }
+
+            if (data.geographical_distribution) {
+                const topCountries = data.geographical_distribution
+                    .sort((a, b) => b.count - a.count)
+                    .slice(0, 10);
+                createChart('geo-chart', 'bar', topCountries, 'country', 'count');
+            } else {
+                console.error('Geographical distribution data is missing');
+            }
 
             console.log('Dashboard update completed');
         }
 
         document.getElementById('export-btn').addEventListener('click', function () {
-            fetch('/api/dashboard-data/')
+            fetch('/dashboard/api/dashboard-data/')
                 .then(response => response.json())
                 .then(data => {
                     let csv = 'data:text/csv;charset=utf-8,';

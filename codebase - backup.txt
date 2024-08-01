@@ -79,6 +79,22 @@ Directory structure of included files:
             └── wsgi.py
             └── __init__.py
             └── __pycache__/
+    └── dashboard
+        └── dashboard/
+            └── admin.py
+            └── apps.py
+            └── models.py
+            └── tests.py
+            └── urls.py
+            └── views.py
+            └── __init__.py
+            └── migrations/
+                └── __init__.py
+                └── __pycache__/
+            └── templates/
+                └── dashboard/
+                    └── dashboard.html
+            └── __pycache__/
 
 
 
@@ -3125,4 +3141,338 @@ File: vendor_management\__init__.py
 ================================================================================
 """
 
+"""
+
+================================================================================
+File: dashboard\admin.py
+================================================================================
+"""
+from django.contrib import admin
+
+# Register your models here.
+
+"""
+
+================================================================================
+File: dashboard\apps.py
+================================================================================
+"""
+from django.apps import AppConfig
+
+
+class DashboardConfig(AppConfig):
+    default_auto_field = 'django.db.models.BigAutoField'
+    name = 'dashboard'
+
+"""
+
+================================================================================
+File: dashboard\models.py
+================================================================================
+"""
+from django.db import models
+
+# Create your models here.
+
+"""
+
+================================================================================
+File: dashboard\tests.py
+================================================================================
+"""
+from django.test import TestCase
+
+# Create your tests here.
+
+"""
+
+================================================================================
+File: dashboard\urls.py
+================================================================================
+"""
+from django.urls import path
+from .views import DashboardView, dashboard_data
+
+urlpatterns = [
+    path("", DashboardView.as_view(), name="dashboard"),
+    path("api/dashboard-data/", dashboard_data, name="dashboard_data"),
+]
+
+"""
+
+================================================================================
+File: dashboard\views.py
+================================================================================
+"""
+from django.views.generic import TemplateView
+from django.contrib.auth.mixins import LoginRequiredMixin
+from django.http import JsonResponse
+from django.db.models import Sum, Count, Avg
+from core.models import Vendor, Part, Spend, Risk, Activity
+from core.utils import log_error
+from core.views import format_currency  # Import the existing format_currency function
+
+
+class DashboardView(LoginRequiredMixin, TemplateView):
+    template_name = "dashboard/dashboard.html"
+
+    @log_error
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["total_vendors"] = Vendor.objects.count()
+        context["total_parts"] = Part.objects.count()
+        total_spend = Spend.objects.aggregate(total=Sum("usd_amount"))["total"] or 0
+        context["total_spend"] = format_currency(
+            total_spend
+        )  # Use the imported function
+        avg_risk_score = (
+            Risk.objects.aggregate(Avg("total_score"))["total_score__avg"] or 0
+        )
+        context["avg_risk_score"] = round(avg_risk_score, 2)
+        context["high_risk_vendors"] = Vendor.objects.filter(
+            risk__risk_level="HIGH"
+        ).count()
+        context["top_vendors"] = Vendor.objects.annotate(
+            total_spend=Sum("spends__usd_amount")
+        ).order_by("-total_spend")[:5]
+        context["recent_activities"] = Activity.objects.all().order_by("-date")[:10]
+        return context
+
+
+def dashboard_data(request):
+    try:
+        total_spend = Spend.objects.aggregate(total=Sum("usd_amount"))["total"] or 0
+        data = {
+            "risk_distribution": list(
+                Risk.objects.values("risk_level").annotate(count=Count("risk_level"))
+            ),
+            "total_spend": format_currency(total_spend),  # Use the imported function
+            "spend_by_year": list(
+                Spend.objects.values("year").annotate(total_spend=Sum("usd_amount"))
+            ),
+            "spend_by_relationship": list(
+                Spend.objects.values("relationship_type").annotate(
+                    total_spend=Sum("usd_amount")
+                )
+            ),
+            "vendor_performance": Vendor.objects.aggregate(
+                avg_rating=Avg("rating"), avg_discount=Avg("average_discount")
+            ),
+            "contract_distribution": list(
+                Vendor.objects.values("contract_type").annotate(
+                    count=Count("contract_type")
+                )
+            ),
+            "geographical_distribution": list(
+                Vendor.objects.values("country").annotate(count=Count("country"))
+            ),
+            "high_risk_vendors": Vendor.objects.filter(risk__risk_level="HIGH").count(),
+        }
+        return JsonResponse(data)
+    except Exception as e:
+        return JsonResponse(
+            {"error": "An error occurred while fetching dashboard data"}, status=500
+        )
+
+"""
+
+================================================================================
+File: dashboard\__init__.py
+================================================================================
+"""
+
+"""
+
+================================================================================
+File: dashboard\migrations\__init__.py
+================================================================================
+"""
+
+"""
+
+================================================================================
+File: dashboard\templates\dashboard\dashboard.html
+================================================================================
+"""
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<h1 class="text-3xl font-bold mb-6">Vendor Management Dashboard</h1>
+
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+    <div class="bg-white p-4 rounded shadow">
+        <h2 class="text-lg font-semibold mb-2">Total Vendors</h2>
+        <p class="text-3xl">{{ total_vendors }}</p>
+    </div>
+    <div class="bg-white p-4 rounded shadow">
+        <h2 class="text-lg font-semibold mb-2">Total Spend</h2>
+        <p class="text-3xl" id="total-spend">{{ total_spend }}</p>
+    </div>
+    <div class="bg-white p-4 rounded shadow">
+        <h2 class="text-lg font-semibold mb-2">Avg Risk Score</h2>
+        <p class="text-3xl">{{ avg_risk_score|floatformat:2 }}</p>
+    </div>
+    <div class="bg-white p-4 rounded shadow">
+        <h2 class="text-lg font-semibold mb-2">High Risk Vendors</h2>
+        <p class="text-3xl" id="high-risk-vendors">Loading...</p>
+    </div>
+</div>
+
+<div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+    <div class="bg-white p-4 rounded shadow">
+        <h2 class="text-lg font-semibold mb-2">Risk Distribution</h2>
+        <canvas id="risk-chart"></canvas>
+    </div>
+    <div class="bg-white p-4 rounded shadow">
+        <h2 class="text-lg font-semibold mb-2">Spend by Year</h2>
+        <canvas id="spend-chart"></canvas>
+    </div>
+    <div class="bg-white p-4 rounded shadow">
+        <h2 class="text-lg font-semibold mb-2">Spend by Relationship Type</h2>
+        <canvas id="relationship-chart"></canvas>
+    </div>
+    <div class="bg-white p-4 rounded shadow">
+        <h2 class="text-lg font-semibold mb-2">Contract Type Distribution</h2>
+        <canvas id="contract-chart"></canvas>
+    </div>
+    <div class="bg-white p-4 rounded shadow">
+        <h2 class="text-lg font-semibold mb-2">Geographical Distribution</h2>
+        <canvas id="geo-chart"></canvas>
+    </div>
+    <div class="bg-white p-4 rounded shadow">
+        <h2 class="text-lg font-semibold mb-2">Vendor Performance</h2>
+        <p>Average Rating: <span id="avg-rating">Loading...</span></p>
+        <p>Average Discount: <span id="avg-discount">Loading...</span></p>
+    </div>
+</div>
+
+<div class="bg-white p-4 rounded shadow mb-8">
+    <h2 class="text-lg font-semibold mb-2">Recent Activity</h2>
+    <ul>
+        {% for activity in recent_activities %}
+        <li>{{ activity.date|date:"Y-m-d H:i" }} - {{ activity.action }} - {{ activity.details }}</li>
+        {% endfor %}
+    </ul>
+</div>
+
+<button id="export-btn" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
+    Export Dashboard Data
+</button>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        fetch('/api/dashboard-data/')
+            .then(response => response.json())
+            .then(data => {
+                updateDashboard(data);
+            });
+
+        function updateDashboard(data) {
+            console.log('Received dashboard data:', data);
+
+            function updateElement(id, value) {
+                const element = document.getElementById(id);
+                if (element) {
+                    element.textContent = value;
+                } else {
+                    console.error(`Element with id '${id}' not found`);
+                }
+            }
+
+            function createChart(canvasId, type, data, labelKey, valueKey) {
+                const canvas = document.getElementById(canvasId);
+                if (!canvas) {
+                    console.error(`Canvas with id '${canvasId}' not found`);
+                    return;
+                }
+
+                new Chart(canvas, {
+                    type: type,
+                    data: {
+                        labels: data.map(item => item[labelKey]),
+                        datasets: [{
+                            data: data.map(item => item[valueKey]),
+                            backgroundColor: [
+                                'rgba(255, 99, 132, 0.8)',
+                                'rgba(54, 162, 235, 0.8)',
+                                'rgba(255, 206, 86, 0.8)',
+                                'rgba(75, 192, 192, 0.8)',
+                                'rgba(153, 102, 255, 0.8)',
+                            ],
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: {
+                            legend: {
+                                position: 'top',
+                            },
+                            title: {
+                                display: true,
+                                text: canvasId.replace('-', ' ').toUpperCase()
+                            }
+                        }
+                    }
+                });
+            }
+
+            updateElement('high-risk-vendors', data.high_risk_vendors);
+            updateElement('total-spend', data.total_spend);
+
+            if (data.vendor_performance) {
+                updateElement('avg-rating', parseFloat(data.vendor_performance.avg_rating).toFixed(2));
+                updateElement('avg-discount', parseFloat(data.vendor_performance.avg_discount).toFixed(2) + '%');
+            } else {
+                console.error('Vendor performance data is missing');
+            }
+
+            createChart('risk-chart', 'pie', data.risk_distribution, 'risk_level', 'count');
+            createChart('spend-chart', 'line', data.spend_by_year, 'year', 'total_spend');
+            createChart('relationship-chart', 'bar', data.spend_by_relationship, 'relationship_type', 'total_spend');
+            createChart('contract-chart', 'pie', data.contract_distribution, 'contract_type', 'count');
+
+            const topCountries = data.geographical_distribution
+                .sort((a, b) => b.count - a.count)
+                .slice(0, 10);
+            createChart('geo-chart', 'bar', topCountries, 'country', 'count');
+
+            console.log('Dashboard update completed');
+        }
+
+        document.getElementById('export-btn').addEventListener('click', function () {
+            fetch('/api/dashboard-data/')
+                .then(response => response.json())
+                .then(data => {
+                    let csv = 'data:text/csv;charset=utf-8,';
+                    csv += 'Category,Subcategory,Value\n';
+
+                    for (let key in data) {
+                        if (Array.isArray(data[key])) {
+                            data[key].forEach(item => {
+                                csv += `${key},${Object.values(item).join(',')}\n`;
+                            });
+                        } else if (typeof data[key] === 'object') {
+                            for (let subKey in data[key]) {
+                                csv += `${key},${subKey},${data[key][subKey]}\n`;
+                            }
+                        } else {
+                            csv += `${key},,${data[key]}\n`;
+                        }
+                    }
+
+                    var encodedUri = encodeURI(csv);
+                    var link = document.createElement("a");
+                    link.setAttribute("href", encodedUri);
+                    link.setAttribute("download", "dashboard_data.csv");
+                    document.body.appendChild(link);
+                    link.click();
+                });
+        });
+    });
+</script>
+{% endblock %}
 """

@@ -85,13 +85,15 @@
         <div class="max-w-7xl mx-auto px-4">
             <div class="flex justify-between items-center py-4">
                 <div class="flex items-center">
-                    <a href="{% url 'dashboard' %}" class="flex items-center">
-                        <span class="font-headline font-bold text-navy text-lg">Vendor Management</span>
+                    <a href="{% url 'home' %}" class="flex items-center">
+                        <span class="font-bold text-navy">Vendor Management</span>
                     </a>
                     <div class="hidden md:flex items-center space-x-4 ml-10">
-                        <a href="{% url 'dashboard' %}"
+                        <a href="{% url 'home' %}"
                             class="text-navy hover:text-raspberry transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-light-blue"
                             aria-current="page">Home</a>
+                        <a href="{% url 'dashboard' %}"
+                            class="text-navy hover:text-raspberry transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-light-blue">Dashboard</a>
                         <a href="{% url 'vendor_list' %}"
                             class="text-navy hover:text-raspberry transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-light-blue">Vendors</a>
                         <a href="{% url 'import_data' %}"

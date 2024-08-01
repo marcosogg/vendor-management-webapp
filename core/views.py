@@ -1,5 +1,5 @@
 from django.http import JsonResponse
-from django.views.generic import ListView, DetailView
+from django.views.generic import ListView, DetailView, TemplateView
 from django.views.generic.edit import CreateView, UpdateView
 from django.db.models import Sum, Count, Q, Avg
 from django.urls import reverse_lazy, reverse
@@ -14,10 +14,36 @@ from .utils import log_error
 from django.views.generic import DetailView
 from django.db.models.functions import Rank
 from django.utils import timezone
+from .utils import format_currency
+from django.db.models import Sum
 
 import logging
 
 logger = logging.getLogger(__name__)
+
+
+class HomeView(LoginRequiredMixin, TemplateView):
+    template_name = "core/home.html"
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+
+        # Dashboard Preview data
+        context["total_vendors"] = Vendor.objects.count()
+        total_spend = Spend.objects.aggregate(total=Sum("usd_amount"))["total"] or 0
+        context["total_spend"] = format_currency(total_spend)
+        context["high_risk_vendors"] = Vendor.objects.filter(
+            risk__risk_level="HIGH"
+        ).count()
+
+        # Recent Activity
+        context["recent_activities"] = Activity.objects.all().order_by("-date")[:5]
+
+        # Latest Announcement (you may need to create an Announcement model)
+        # context['latest_announcement'] = Announcement.objects.latest('date').message
+        context["latest_announcement"] = "Welcome to the new Vendor Management System!"
+
+        return context
 
 
 class VendorListView(LoginRequiredMixin, ListView):
@@ -221,17 +247,6 @@ def contract_type_distribution(request):
         count=Count("contract_type")
     )
     return JsonResponse(list(contract_data), safe=False)
-
-
-def format_currency(amount):
-    if amount >= 1_000_000_000:
-        return f"${amount / 1_000_000_000:.2f}B"
-    elif amount >= 1_000_000:
-        return f"${amount / 1_000_000:.2f}M"
-    elif amount >= 1_000:
-        return f"${amount / 1_000:.2f}K"
-    else:
-        return f"${amount:,.2f}"
 
 
 def risk_distribution(request):

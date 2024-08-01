@@ -50,7 +50,13 @@ def generate_tree(project_root, relevant_dirs):
 
 
 def concatenate_files(project_root, output_file):
-    relevant_dirs = ["core", "data_import", "templates", "vendor_management"]
+    relevant_dirs = [
+        "core",
+        "data_import",
+        "templates",
+        "vendor_management",
+        "dashboard",
+    ]
 
     # Delete existing output file if it exists
     if os.path.exists(output_file):
@@ -108,7 +114,7 @@ def concatenate_files(project_root, output_file):
 
 if __name__ == "__main__":
     project_root = "C:\\Users\\marcos.gomes\\dev\\Python\\vendor-management-webapp"
-    output_file = "concatenated_code.txt"
+    output_file = "codebase.txt"
     try:
         concatenate_files(project_root, output_file)
         logging.info(f"Relevant code files have been concatenated into {output_file}")

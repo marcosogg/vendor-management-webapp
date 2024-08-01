@@ -1,71 +1,75 @@
 {% extends 'base.html' %}
-{% load static %}
 
 {% block title %}Home - Vendor Management{% endblock %}
 
 {% block content %}
-<div class="container">
-    <h1 class="mb-4">Vendor Management Dashboard</h1>
+<div class="container mx-auto px-4 py-8">
+    <h1 class="text-3xl font-bold mb-6 text-navy">Welcome to Vendor Management</h1>
 
-    <div class="row">
-        <div class="col-md-3 mb-4">
-            <div class="card">
-                <div class="card-body">
-                    <h5 class="card-title">Total Vendors</h5>
-                    <p class="card-text display-4">{{ vendor_count }}</p>
-                </div>
+    <p class="mb-6 text-gray-700">Streamline your vendor relationships, monitor performance, and make data-driven
+        decisions with our comprehensive management tool.</p>
+
+    <!-- Dashboard Preview -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <div class="bg-white p-6 rounded-lg shadow-md">
+            <h2 class="text-xl font-semibold mb-2 text-navy">Total Vendors</h2>
+            <p class="text-3xl font-bold text-blue-600">{{ total_vendors }}</p>
+        </div>
+        <div class="bg-white p-6 rounded-lg shadow-md">
+            <h2 class="text-xl font-semibold mb-2 text-navy">Total Spend</h2>
+            <p class="text-3xl font-bold text-green-600">{{ total_spend }}</p>
+        </div>
+        <div class="bg-white p-6 rounded-lg shadow-md">
+            <h2 class="text-xl font-semibold mb-2 text-navy">High Risk Vendors</h2>
+            <p class="text-3xl font-bold text-red-600">{{ high_risk_vendors }}</p>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+        <!-- Quick Access Menu -->
+        <div class="bg-white p-6 rounded-lg shadow-md">
+            <h2 class="text-xl font-semibold mb-4 text-navy">Quick Access</h2>
+            <div class="space-y-4">
+                <a href="{% url 'vendor_list' %}"
+                    class="block bg-blue-100 text-blue-700 px-4 py-2 rounded-lg hover:bg-blue-200">Vendor List</a>
+                <a href="{% url 'dashboard' %}"
+                    class="block bg-green-100 text-green-700 px-4 py-2 rounded-lg hover:bg-green-200">Dashboard</a>
+                <a href="{% url 'import_data' %}"
+                    class="block bg-yellow-100 text-yellow-700 px-4 py-2 rounded-lg hover:bg-yellow-200">Import Data</a>
             </div>
         </div>
-        <div class="col-md-3 mb-4">
-            <div class="card">
-                <div class="card-body">
-                    <h5 class="card-title">Total Parts</h5>
-                    <p class="card-text display-4">{{ part_count }}</p>
-                </div>
-            </div>
+
+        <!-- Recent Activity Feed -->
+        <div class="bg-white p-6 rounded-lg shadow-md">
+            <h2 class="text-xl font-semibold mb-4 text-navy">Recent Activity</h2>
+            <ul class="space-y-2">
+                {% for activity in recent_activities %}
+                <li class="text-sm text-gray-600">{{ activity.date|date:"Y-m-d H:i" }} - {{ activity.action }}</li>
+                {% empty %}
+                <li class="text-sm text-gray-600">No recent activity</li>
+                {% endfor %}
+            </ul>
         </div>
-        <div class="col-md-3 mb-4">
-            <div class="card">
-                <div class="card-body">
-                    <h5 class="card-title">Total Spend</h5>
-                    <p class="card-text display-4">${{ spend_total|floatformat:2 }}</p>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3 mb-4">
-            <div class="card">
-                <div class="card-body">
-                    <h5 class="card-title">High Risk Vendors</h5>
-                    <p class="card-text display-4">{{ high_risk_count }}</p>
-                </div>
+
+        <!-- Announcements or News Section -->
+        <div class="bg-white p-6 rounded-lg shadow-md">
+            <h2 class="text-xl font-semibold mb-4 text-navy">Announcements</h2>
+            <div class="bg-yellow-50 border-l-4 border-yellow-400 p-4">
+                <p class="text-sm text-yellow-700">{{ latest_announcement }}</p>
             </div>
         </div>
     </div>
 
-    <div class="row mt-4">
-        <div class="col-md-6 mb-4">
-            <div class="card">
-                <div class="card-body">
-                    <h5 class="card-title">Average Spend per Vendor</h5>
-                    <p class="card-text display-4">${{ avg_spend_per_vendor|floatformat:2 }}</p>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-6 mb-4">
-            <div class="card">
-                <div class="card-body">
-                    <h5 class="card-title">Top 5 Vendors by Spend</h5>
-                    <ul class="list-group">
-                        {% for vendor in top_vendors %}
-                        <li class="list-group-item d-flex justify-content-between align-items-center">
-                            {{ vendor.vendor_name }}
-                            <span class="badge bg-primary rounded-pill">${{ vendor.total_spend|floatformat:2 }}</span>
-                        </li>
-                        {% endfor %}
-                    </ul>
-                </div>
-            </div>
-        </div>
+    <!-- Getting Started Section -->
+    <div class="bg-white p-6 rounded-lg shadow-md mb-8">
+        <h2 class="text-xl font-semibold mb-4 text-navy">Getting Started</h2>
+        <p class="mb-4 text-gray-700">New to the Vendor Management System? Follow these steps to get started:</p>
+        <ol class="list-decimal list-inside space-y-2 text-gray-700">
+            <li>Add your vendors to the system</li>
+            <li>Import historical spend data</li>
+            <li>Set up risk assessment criteria</li>
+            <li>Explore the dashboard for insights</li>
+        </ol>
     </div>
 </div>
 {% endblock %}
