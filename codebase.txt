@@ -2795,16 +2795,36 @@ File: templates\base.html
             transition: all 0.3s ease-in-out;
         }
     </style>
+    <!-- Stylesheets first -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/chart.js@3.7.1/dist/chart.min.css">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.7.1/dist/chart.min.js"></script>
     <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.10.24/css/jquery.dataTables.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/shepherd.js@8.3.1/dist/css/shepherd.css" />
+
+    <!-- jQuery first, as many plugins depend on it -->
     <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+
+    <!-- Popper.js, required by Tippy.js -->
+    <script src="https://unpkg.com/@popperjs/core@2"></script>
+
+    <!-- Tippy.js for tooltips -->
+    <script src="https://unpkg.com/tippy.js@6"></script>
+
+    <!-- DataTables, depends on jQuery -->
     <script type="text/javascript" charset="utf8"
         src="https://cdn.datatables.net/1.10.24/js/jquery.dataTables.js"></script>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/shepherd.js@8.3.1/dist/css/shepherd.css" />
+
+    <!-- Load Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.7.1/dist/chart.min.js"></script>
+
+    <!-- Load Chart.js Geo Plugin -->
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-chart-geo@3.7.1/dist/chartjs-chart-geo.min.js"></script>
+
+
+    <!-- Shepherd.js for guided tours -->
     <script src="https://cdn.jsdelivr.net/npm/shepherd.js@8.3.1/dist/js/shepherd.min.js"></script>
-    <script src="https://unpkg.com/@popperjs/core@2"></script>
-    <script src="https://unpkg.com/tippy.js@6"></script>
+
+
+
 </head>
 
 <body class="bg-gray-100 font-sans">
@@ -3241,12 +3261,16 @@ File: dashboard\views.py
 from django.views.generic import TemplateView
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.http import JsonResponse
-from django.db.models import Sum, Count, Avg
+from django.db.models import Sum, Count, Avg, F
 from core.models import Vendor, Part, Spend, Risk, Activity
 from core.utils import log_error
 from django.utils import timezone
 from dateutil.relativedelta import relativedelta
 from core.views import format_currency
+from django.db.models.functions import TruncYear
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class DashboardView(LoginRequiredMixin, TemplateView):
@@ -3276,49 +3300,86 @@ class DashboardView(LoginRequiredMixin, TemplateView):
 @log_error
 def dashboard_data(request):
     try:
-        end_date = timezone.now().date()
-        start_date = end_date - relativedelta(years=1)
+        date_range = request.GET.get("date_range", "1")
+        sort_relationship = request.GET.get("sort_relationship", "total")
 
-        total_spend = (
-            Spend.objects.filter(year__gte=start_date.year).aggregate(
-                total=Sum("usd_amount")
-            )["total"]
-            or 0
+        end_date = timezone.now().date()
+        if date_range == "1":
+            start_date = end_date - relativedelta(years=1)
+        elif date_range == "3":
+            start_date = end_date - relativedelta(years=3)
+        else:
+            start_date = None
+
+        spend_query = Spend.objects.all()
+        if start_date:
+            spend_query = spend_query.filter(year__gte=start_date.year)
+
+        total_spend = spend_query.aggregate(total=Sum("usd_amount"))["total"] or 0
+
+        risk_distribution = list(
+            Risk.objects.values("risk_level")
+            .annotate(count=Count("risk_level"))
+            .order_by("risk_level")
+        )
+
+        spend_by_year = list(
+            spend_query.values("year")
+            .annotate(total_spend=Sum("usd_amount"))
+            .order_by("year")
+        )
+
+        spend_by_relationship = list(
+            spend_query.values("relationship_type").annotate(
+                total_spend=Sum("usd_amount")
+            )
+        )
+
+        if sort_relationship == "alphabetical":
+            spend_by_relationship.sort(key=lambda x: x["relationship_type"])
+        else:
+            spend_by_relationship.sort(key=lambda x: x["total_spend"], reverse=True)
+
+        contract_distribution = list(
+            Vendor.objects.values("contract_type")
+            .annotate(count=Count("contract_type"))
+            .order_by("-count")
+        )
+
+        geographical_distribution = list(
+            Vendor.objects.exclude(country__isnull=True)
+            .exclude(country__exact="")
+            .values("country")
+            .annotate(count=Count("country"))
+            .order_by("-count")
+        )
+
+        vendor_performance = Vendor.objects.aggregate(
+            avg_rating=Avg("rating"), avg_discount=Avg("average_discount")
+        )
+
+        avg_risk_score = (
+            Risk.objects.aggregate(Avg("total_score"))["total_score__avg"] or 0
         )
 
         data = {
-            "risk_distribution": list(
-                Risk.objects.values("risk_level").annotate(count=Count("risk_level"))
-            ),
+            "risk_distribution": risk_distribution,
             "total_spend": format_currency(total_spend),
-            "spend_by_year": list(
-                Spend.objects.filter(year__gte=start_date.year)
-                .values("year")
-                .annotate(total_spend=Sum("usd_amount"))
-                .order_by("year")
-            ),
-            "spend_by_relationship": list(
-                Spend.objects.filter(year__gte=start_date.year)
-                .values("relationship_type")
-                .annotate(total_spend=Sum("usd_amount"))
-            ),
-            "vendor_performance": Vendor.objects.aggregate(
-                avg_rating=Avg("rating"), avg_discount=Avg("average_discount")
-            ),
-            "contract_distribution": list(
-                Vendor.objects.values("contract_type").annotate(
-                    count=Count("contract_type")
-                )
-            ),
-            "geographical_distribution": list(
-                Vendor.objects.values("country").annotate(count=Count("country"))
-            ),
+            "spend_by_year": spend_by_year,
+            "spend_by_relationship": spend_by_relationship,
+            "vendor_performance": vendor_performance,
+            "contract_distribution": contract_distribution,
+            "geographical_distribution": {
+                item["country"]: item["count"] for item in geographical_distribution
+            },
             "high_risk_vendors": Vendor.objects.filter(risk__risk_level="HIGH").count(),
             "total_vendors": Vendor.objects.count(),
             "total_parts": Part.objects.count(),
+            "avg_risk_score": round(avg_risk_score, 2),
         }
         return JsonResponse(data)
     except Exception as e:
+        logger.error(f"Error in dashboard_data: {str(e)}", exc_info=True)
         return JsonResponse(
             {"error": f"An error occurred while fetching dashboard data: {str(e)}"},
             status=500,
@@ -3353,7 +3414,7 @@ File: dashboard\templates\dashboard\dashboard.html
 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
     <div class="bg-white p-4 rounded shadow">
         <h2 class="text-lg font-semibold mb-2">Total Vendors</h2>
-        <p class="text-3xl">{{ total_vendors }}</p>
+        <p class="text-3xl" id="total-vendors">{{ total_vendors }}</p>
     </div>
     <div class="bg-white p-4 rounded shadow">
         <h2 class="text-lg font-semibold mb-2">Total Spend</h2>
@@ -3361,39 +3422,58 @@ File: dashboard\templates\dashboard\dashboard.html
     </div>
     <div class="bg-white p-4 rounded shadow">
         <h2 class="text-lg font-semibold mb-2">Avg Risk Score</h2>
-        <p class="text-3xl">{{ avg_risk_score|floatformat:2 }}</p>
+        <p class="text-3xl" id="avg-risk-score">{{ avg_risk_score|floatformat:2 }}</p>
     </div>
     <div class="bg-white p-4 rounded shadow">
         <h2 class="text-lg font-semibold mb-2">High Risk Vendors</h2>
         <p class="text-3xl" id="high-risk-vendors">Loading...</p>
     </div>
 </div>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+    <div class="bg-white p-4 rounded shadow">
+        <h2 class="text-lg font-semibold mb-2">Avg Rating</h2>
+        <p class="text-3xl" id="avg-rating">Loading...</p>
+    </div>
+    <div class="bg-white p-4 rounded shadow">
+        <h2 class="text-lg font-semibold mb-2">Avg Discount</h2>
+        <p class="text-3xl" id="avg-discount">Loading...</p>
+    </div>
+</div>
 
 <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
     <div class="bg-white p-4 rounded shadow">
-        <h2 class="text-lg font-semibold mb-2">Risk Distribution</h2>
+        <h2 class="text-lg font-semibold mb-2 text-navy">Risk Distribution</h2>
         <canvas id="risk-chart"></canvas>
     </div>
     <div class="bg-white p-4 rounded shadow">
-        <h2 class="text-lg font-semibold mb-2">Spend by Year</h2>
+        <h2 class="text-lg font-semibold mb-2 text-navy">Spend by Year</h2>
+        <div class="mb-2">
+            <button id="toggle-spend-chart" class="bg-light-blue text-white px-2 py-1 rounded">Toggle Chart
+                Type</button>
+        </div>
         <canvas id="spend-chart"></canvas>
     </div>
     <div class="bg-white p-4 rounded shadow">
-        <h2 class="text-lg font-semibold mb-2">Spend by Relationship Type</h2>
+        <h2 class="text-lg font-semibold mb-2 text-navy">Spend by Relationship Type</h2>
+        <div class="mb-2">
+            <select id="sort-relationship-chart" class="border rounded px-2 py-1">
+                <option value="total">Sort by Total Spend</option>
+                <option value="alphabetical">Sort Alphabetically</option>
+            </select>
+        </div>
         <canvas id="relationship-chart"></canvas>
     </div>
     <div class="bg-white p-4 rounded shadow">
-        <h2 class="text-lg font-semibold mb-2">Contract Type Distribution</h2>
+        <h2 class="text-lg font-semibold mb-2 text-navy">Contract Type Distribution</h2>
         <canvas id="contract-chart"></canvas>
     </div>
     <div class="bg-white p-4 rounded shadow">
-        <h2 class="text-lg font-semibold mb-2">Geographical Distribution</h2>
+        <h2 class="text-lg font-semibold mb-2 text-navy">Geographical Distribution</h2>
         <canvas id="geo-chart"></canvas>
     </div>
     <div class="bg-white p-4 rounded shadow">
-        <h2 class="text-lg font-semibold mb-2">Vendor Performance</h2>
-        <p>Average Rating: <span id="avg-rating">Loading...</span></p>
-        <p>Average Discount: <span id="avg-discount">Loading...</span></p>
+        <h2 class="text-lg font-semibold mb-2 text-navy">Top 10 Countries</h2>
+        <ul id="top-countries-list" class="list-disc pl-5"></ul>
     </div>
 </div>
 
@@ -3406,138 +3486,365 @@ File: dashboard\templates\dashboard\dashboard.html
     </ul>
 </div>
 
-<button id="export-btn" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
-    Export Dashboard Data
-</button>
+<div class="mb-8">
+    <button id="export-btn" class="bg-green hover:bg-light-blue text-white font-bold py-2 px-4 rounded mr-2">
+        Export Dashboard Data
+    </button>
+    <select id="date-range" class="border rounded px-2 py-1">
+        <option value="1">Last Year</option>
+        <option value="3">Last 3 Years</option>
+        <option value="all">All Time</option>
+    </select>
+</div>
 {% endblock %}
 
 {% block extra_js %}
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
     document.addEventListener('DOMContentLoaded', function () {
-        fetch('/dashboard/api/dashboard-data/')
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-                return response.json();
-            })
-            .then(data => {
-                console.log('Received dashboard data:', data);
-                updateDashboard(data);
-            })
-            .catch(error => {
-                console.error('Error fetching dashboard data:', error);
-            });
+        if (typeof Chart !== 'undefined' && Chart.Geo) {
+            Chart.register(Chart.Geo);
+        } else {
+            console.error('ChartGeo is not loaded. Choropleth chart will not be available.');
+        }
+
+        let spendChart, relationshipChart, riskChart, contractChart, geoChart;
+        let spendChartType = 'line';
+
+        function fetchDashboardData() {
+            const dateRange = document.getElementById('date-range').value;
+            const sortRelationship = document.getElementById('sort-relationship-chart').value;
+            fetch(`/dashboard/api/dashboard-data/?date_range=${dateRange}&sort_relationship=${sortRelationship}`)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    console.log('Received dashboard data:', data);
+                    updateDashboard(data);
+                })
+                .catch(error => {
+                    console.error('Error fetching dashboard data:', error);
+                    alert('An error occurred while fetching dashboard data. Please try again later.');
+                });
+        }
+
 
         function updateDashboard(data) {
-            console.log('Updating dashboard with data:', data);
+            updateSummaryCards(data);
+            if (data.risk_distribution) updateRiskChart(data.risk_distribution);
+            if (data.spend_by_year) updateSpendChart(data.spend_by_year);
+            if (data.spend_by_relationship) updateRelationshipChart(data.spend_by_relationship);
+            if (data.contract_distribution) updateContractChart(data.contract_distribution);
+            if (data.geographical_distribution) {
+                updateGeoChart(data.geographical_distribution);
+                updateTopCountriesList(data.geographical_distribution);
+            }
+        }
 
-            function updateElement(id, value) {
-                const element = document.getElementById(id);
-                if (element) {
-                    element.textContent = value;
-                } else {
-                    console.error(`Element with id '${id}' not found`);
-                }
+        function updateSummaryCards(data) {
+            document.getElementById('total-vendors').textContent = data.total_vendors || 'N/A';
+            document.getElementById('total-spend').textContent = data.total_spend || 'N/A';
+            document.getElementById('avg-risk-score').textContent = parseFloat(data.avg_risk_score || 0).toFixed(2);
+            document.getElementById('high-risk-vendors').textContent = data.high_risk_vendors || 'N/A';
+            document.getElementById('avg-rating').textContent = parseFloat(data.vendor_performance?.avg_rating || 0).toFixed(2);
+            document.getElementById('avg-discount').textContent = parseFloat(data.vendor_performance?.avg_discount || 0).toFixed(2) + '%';
+        }
+
+        function updateRiskChart(riskData) {
+            const ctx = document.getElementById('risk-chart').getContext('2d');
+            const colors = {
+                'HIGH': '#C13838',
+                'MEDIUM': '#DB6C33',
+                'LOW': '#31A784'
+            };
+
+            if (riskChart) {
+                riskChart.destroy();
             }
 
-            function createChart(canvasId, type, data, labelKey, valueKey) {
-                const canvas = document.getElementById(canvasId);
-                if (!canvas) {
-                    console.error(`Canvas with id '${canvasId}' not found`);
-                    return;
-                }
-
-                if (!data || data.length === 0) {
-                    console.error(`No data available for chart '${canvasId}'`);
-                    return;
-                }
-
-                console.log(`Creating chart for '${canvasId}' with data:`, data);
-
-                try {
-                    new Chart(canvas, {
-                        type: type,
-                        data: {
-                            labels: data.map(item => item[labelKey]),
-                            datasets: [{
-                                data: data.map(item => item[valueKey]),
-                                backgroundColor: [
-                                    'rgba(255, 99, 132, 0.8)',
-                                    'rgba(54, 162, 235, 0.8)',
-                                    'rgba(255, 206, 86, 0.8)',
-                                    'rgba(75, 192, 192, 0.8)',
-                                    'rgba(153, 102, 255, 0.8)',
-                                ],
-                            }]
+            riskChart = new Chart(ctx, {
+                type: 'pie',
+                data: {
+                    labels: riskData.map(item => item.risk_level),
+                    datasets: [{
+                        data: riskData.map(item => item.count),
+                        backgroundColor: riskData.map(item => colors[item.risk_level]),
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            position: 'right',
                         },
-                        options: {
-                            responsive: true,
-                            plugins: {
-                                legend: {
-                                    position: 'top',
-                                },
-                                title: {
-                                    display: true,
-                                    text: canvasId.replace('-', ' ').toUpperCase()
+                        tooltip: {
+                            callbacks: {
+                                label: function (context) {
+                                    const label = context.label || '';
+                                    const value = context.parsed || 0;
+                                    const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                    const percentage = ((value / total) * 100).toFixed(1);
+                                    return `${label}: ${value} (${percentage}%)`;
                                 }
                             }
                         }
-                    });
-                    console.log(`Chart '${canvasId}' created successfully`);
-                } catch (error) {
-                    console.error(`Error creating chart '${canvasId}':`, error);
+                    }
                 }
-            }
-
-            updateElement('high-risk-vendors', data.high_risk_vendors || 'N/A');
-            updateElement('total-spend', data.total_spend || 'N/A');
-
-            if (data.vendor_performance) {
-                updateElement('avg-rating', parseFloat(data.vendor_performance.avg_rating || 0).toFixed(2));
-                updateElement('avg-discount', parseFloat(data.vendor_performance.avg_discount || 0).toFixed(2) + '%');
-            } else {
-                console.error('Vendor performance data is missing');
-                updateElement('avg-rating', 'N/A');
-                updateElement('avg-discount', 'N/A');
-            }
-
-            if (data.risk_distribution) {
-                createChart('risk-chart', 'pie', data.risk_distribution, 'risk_level', 'count');
-            } else {
-                console.error('Risk distribution data is missing');
-            }
-
-            if (data.spend_by_year) {
-                createChart('spend-chart', 'line', data.spend_by_year, 'year', 'total_spend');
-            } else {
-                console.error('Spend by year data is missing');
-            }
-
-            if (data.spend_by_relationship) {
-                createChart('relationship-chart', 'bar', data.spend_by_relationship, 'relationship_type', 'total_spend');
-            } else {
-                console.error('Spend by relationship data is missing');
-            }
-
-            if (data.contract_distribution) {
-                createChart('contract-chart', 'pie', data.contract_distribution, 'contract_type', 'count');
-            } else {
-                console.error('Contract distribution data is missing');
-            }
-
-            if (data.geographical_distribution) {
-                const topCountries = data.geographical_distribution
-                    .sort((a, b) => b.count - a.count)
-                    .slice(0, 10);
-                createChart('geo-chart', 'bar', topCountries, 'country', 'count');
-            } else {
-                console.error('Geographical distribution data is missing');
-            }
-
-            console.log('Dashboard update completed');
+            });
         }
+
+        function updateSpendChart(spendData) {
+            const ctx = document.getElementById('spend-chart').getContext('2d');
+
+            if (spendChart) {
+                spendChart.destroy();
+            }
+
+            spendChart = new Chart(ctx, {
+                type: spendChartType,
+                data: {
+                    labels: spendData.map(item => item.year),
+                    datasets: [{
+                        label: 'Total Spend',
+                        data: spendData.map(item => item.total_spend),
+                        borderColor: '#38D4FF',
+                        backgroundColor: 'rgba(56, 212, 255, 0.2)',
+                        tension: 0.1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: 'Spend Amount ($)'
+                            }
+                        }
+                    },
+                    plugins: {
+                        tooltip: {
+                            callbacks: {
+                                label: function (context) {
+                                    let label = context.dataset.label || '';
+                                    if (label) {
+                                        label += ': ';
+                                    }
+                                    if (context.parsed.y !== null) {
+                                        label += new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(context.parsed.y);
+                                    }
+                                    return label;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        function updateRelationshipChart(relationshipData) {
+            const ctx = document.getElementById('relationship-chart').getContext('2d');
+
+            if (relationshipChart) {
+                relationshipChart.destroy();
+            }
+
+            relationshipChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: relationshipData.map(item => item.relationship_type),
+                    datasets: [{
+                        label: 'Total Spend',
+                        data: relationshipData.map(item => item.total_spend),
+                        backgroundColor: '#9C224F',
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: 'Spend Amount ($)'
+                            }
+                        }
+                    },
+                    plugins: {
+                        tooltip: {
+                            callbacks: {
+                                label: function (context) {
+                                    let label = context.dataset.label || '';
+                                    if (label) {
+                                        label += ': ';
+                                    }
+                                    if (context.parsed.y !== null) {
+                                        label += new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(context.parsed.y);
+                                    }
+                                    return label;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        function updateContractChart(contractData) {
+            const ctx = document.getElementById('contract-chart').getContext('2d');
+
+            if (contractChart) {
+                contractChart.destroy();
+            }
+
+            contractChart = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: contractData.map(item => item.contract_type),
+                    datasets: [{
+                        data: contractData.map(item => item.count),
+                        backgroundColor: ['#0D173D', '#9C224F', '#31A784', '#DB6C33'],
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            position: 'right',
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function (context) {
+                                    const label = context.label || '';
+                                    const value = context.parsed || 0;
+                                    const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                    const percentage = ((value / total) * 100).toFixed(1);
+                                    return `${label}: ${value} (${percentage}%)`;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        function updateGeoChart(geoData) {
+            const ctx = document.getElementById('geo-chart').getContext('2d');
+
+            if (geoChart) {
+                geoChart.destroy();
+            }
+
+            if (typeof Chart !== 'undefined' && Chart.Geo) {
+                // Prepare data for the chart
+                const data = Object.entries(geoData).map(([country, count]) => ({
+                    country: country,
+                    value: count
+                }));
+
+                geoChart = new Chart(ctx, {
+                    type: 'choropleth',
+                    data: {
+                        labels: data.map(d => d.country),
+                        datasets: [{
+                            label: 'Vendors per Country',
+                            data: data.map(d => ({ feature: d.country, value: d.value })),
+                        }]
+                    },
+                    options: {
+                        showOutline: true,
+                        showGraticule: true,
+                        plugins: {
+                            legend: {
+                                display: false
+                            },
+                            tooltip: {
+                                callbacks: {
+                                    label: function (context) {
+                                        let label = context.feature || '';
+                                        if (label) {
+                                            label += ': ';
+                                        }
+                                        if (context.formattedValue !== null) {
+                                            label += context.formattedValue + ' vendors';
+                                        }
+                                        return label;
+                                    }
+                                }
+                            }
+                        },
+                        scales: {
+                            projection: {
+                                axis: 'x',
+                                projection: 'equalEarth'
+                            }
+                        }
+                    }
+                });
+            } else {
+                // Fallback to a bar chart if ChartGeo is not available
+                const sortedData = Object.entries(geoData).sort((a, b) => b[1] - a[1]).slice(0, 10);
+                geoChart = new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: sortedData.map(d => d[0]),
+                        datasets: [{
+                            label: 'Vendors per Country',
+                            data: sortedData.map(d => d[1]),
+                            backgroundColor: 'rgba(75, 192, 192, 0.6)',
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: {
+                            legend: {
+                                display: false
+                            },
+                            title: {
+                                display: true,
+                                text: 'Top 10 Countries by Vendor Count'
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                title: {
+                                    display: true,
+                                    text: 'Number of Vendors'
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+        }
+
+        function updateTopCountriesList(geoData) {
+            const listElement = document.getElementById('top-countries-list');
+            listElement.innerHTML = '';
+
+            const sortedCountries = Object.entries(geoData)
+                .sort((a, b) => b[1] - a[1])
+                .slice(0, 10);
+
+            sortedCountries.forEach(([country, count]) => {
+                const li = document.createElement('li');
+                li.textContent = `${country}: ${count} vendors`;
+                listElement.appendChild(li);
+            });
+        }
+
+        document.getElementById('toggle-spend-chart').addEventListener('click', function () {
+            spendChartType = spendChartType === 'line' ? 'bar' : 'line';
+            fetchDashboardData();
+        });
+
+        document.getElementById('sort-relationship-chart').addEventListener('change', fetchDashboardData);
+
+        document.getElementById('date-range').addEventListener('change', fetchDashboardData);
 
         document.getElementById('export-btn').addEventListener('click', function () {
             fetch('/dashboard/api/dashboard-data/')
@@ -3568,6 +3875,9 @@ File: dashboard\templates\dashboard\dashboard.html
                     link.click();
                 });
         });
+
+        // Initial fetch of dashboard data
+        fetchDashboardData();
     });
 </script>
 {% endblock %}

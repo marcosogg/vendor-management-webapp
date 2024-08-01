@@ -68,16 +68,36 @@
             transition: all 0.3s ease-in-out;
         }
     </style>
+    <!-- Stylesheets first -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/chart.js@3.7.1/dist/chart.min.css">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.7.1/dist/chart.min.js"></script>
     <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.10.24/css/jquery.dataTables.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/shepherd.js@8.3.1/dist/css/shepherd.css" />
+
+    <!-- jQuery first, as many plugins depend on it -->
     <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+
+    <!-- Popper.js, required by Tippy.js -->
+    <script src="https://unpkg.com/@popperjs/core@2"></script>
+
+    <!-- Tippy.js for tooltips -->
+    <script src="https://unpkg.com/tippy.js@6"></script>
+
+    <!-- DataTables, depends on jQuery -->
     <script type="text/javascript" charset="utf8"
         src="https://cdn.datatables.net/1.10.24/js/jquery.dataTables.js"></script>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/shepherd.js@8.3.1/dist/css/shepherd.css" />
+
+    <!-- Load Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.7.1/dist/chart.min.js"></script>
+
+    <!-- Load Chart.js Geo Plugin -->
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-chart-geo@3.7.1/dist/chartjs-chart-geo.min.js"></script>
+
+
+    <!-- Shepherd.js for guided tours -->
     <script src="https://cdn.jsdelivr.net/npm/shepherd.js@8.3.1/dist/js/shepherd.min.js"></script>
-    <script src="https://unpkg.com/@popperjs/core@2"></script>
-    <script src="https://unpkg.com/tippy.js@6"></script>
+
+
+
 </head>
 
 <body class="bg-gray-100 font-sans">

@@ -1,12 +1,16 @@
 from django.views.generic import TemplateView
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.http import JsonResponse
-from django.db.models import Sum, Count, Avg
+from django.db.models import Sum, Count, Avg, F
 from core.models import Vendor, Part, Spend, Risk, Activity
 from core.utils import log_error
 from django.utils import timezone
 from dateutil.relativedelta import relativedelta
 from core.views import format_currency
+from django.db.models.functions import TruncYear
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class DashboardView(LoginRequiredMixin, TemplateView):
@@ -36,49 +40,86 @@ class DashboardView(LoginRequiredMixin, TemplateView):
 @log_error
 def dashboard_data(request):
     try:
-        end_date = timezone.now().date()
-        start_date = end_date - relativedelta(years=1)
+        date_range = request.GET.get("date_range", "1")
+        sort_relationship = request.GET.get("sort_relationship", "total")
 
-        total_spend = (
-            Spend.objects.filter(year__gte=start_date.year).aggregate(
-                total=Sum("usd_amount")
-            )["total"]
-            or 0
+        end_date = timezone.now().date()
+        if date_range == "1":
+            start_date = end_date - relativedelta(years=1)
+        elif date_range == "3":
+            start_date = end_date - relativedelta(years=3)
+        else:
+            start_date = None
+
+        spend_query = Spend.objects.all()
+        if start_date:
+            spend_query = spend_query.filter(year__gte=start_date.year)
+
+        total_spend = spend_query.aggregate(total=Sum("usd_amount"))["total"] or 0
+
+        risk_distribution = list(
+            Risk.objects.values("risk_level")
+            .annotate(count=Count("risk_level"))
+            .order_by("risk_level")
+        )
+
+        spend_by_year = list(
+            spend_query.values("year")
+            .annotate(total_spend=Sum("usd_amount"))
+            .order_by("year")
+        )
+
+        spend_by_relationship = list(
+            spend_query.values("relationship_type").annotate(
+                total_spend=Sum("usd_amount")
+            )
+        )
+
+        if sort_relationship == "alphabetical":
+            spend_by_relationship.sort(key=lambda x: x["relationship_type"])
+        else:
+            spend_by_relationship.sort(key=lambda x: x["total_spend"], reverse=True)
+
+        contract_distribution = list(
+            Vendor.objects.values("contract_type")
+            .annotate(count=Count("contract_type"))
+            .order_by("-count")
+        )
+
+        geographical_distribution = list(
+            Vendor.objects.exclude(country__isnull=True)
+            .exclude(country__exact="")
+            .values("country")
+            .annotate(count=Count("country"))
+            .order_by("-count")
+        )
+
+        vendor_performance = Vendor.objects.aggregate(
+            avg_rating=Avg("rating"), avg_discount=Avg("average_discount")
+        )
+
+        avg_risk_score = (
+            Risk.objects.aggregate(Avg("total_score"))["total_score__avg"] or 0
         )
 
         data = {
-            "risk_distribution": list(
-                Risk.objects.values("risk_level").annotate(count=Count("risk_level"))
-            ),
+            "risk_distribution": risk_distribution,
             "total_spend": format_currency(total_spend),
-            "spend_by_year": list(
-                Spend.objects.filter(year__gte=start_date.year)
-                .values("year")
-                .annotate(total_spend=Sum("usd_amount"))
-                .order_by("year")
-            ),
-            "spend_by_relationship": list(
-                Spend.objects.filter(year__gte=start_date.year)
-                .values("relationship_type")
-                .annotate(total_spend=Sum("usd_amount"))
-            ),
-            "vendor_performance": Vendor.objects.aggregate(
-                avg_rating=Avg("rating"), avg_discount=Avg("average_discount")
-            ),
-            "contract_distribution": list(
-                Vendor.objects.values("contract_type").annotate(
-                    count=Count("contract_type")
-                )
-            ),
-            "geographical_distribution": list(
-                Vendor.objects.values("country").annotate(count=Count("country"))
-            ),
+            "spend_by_year": spend_by_year,
+            "spend_by_relationship": spend_by_relationship,
+            "vendor_performance": vendor_performance,
+            "contract_distribution": contract_distribution,
+            "geographical_distribution": {
+                item["country"]: item["count"] for item in geographical_distribution
+            },
             "high_risk_vendors": Vendor.objects.filter(risk__risk_level="HIGH").count(),
             "total_vendors": Vendor.objects.count(),
             "total_parts": Part.objects.count(),
+            "avg_risk_score": round(avg_risk_score, 2),
         }
         return JsonResponse(data)
     except Exception as e:
+        logger.error(f"Error in dashboard_data: {str(e)}", exc_info=True)
         return JsonResponse(
             {"error": f"An error occurred while fetching dashboard data: {str(e)}"},
             status=500,
