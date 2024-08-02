@@ -564,6 +564,12 @@ urlpatterns = [
 File: core\utils.py
 ================================================================================
 """
+from newsapi import NewsApiClient
+from django.conf import settings
+from django.core.cache import cache
+from requests.exceptions import RequestException
+from datetime import datetime, timedelta
+
 import logging
 
 logger = logging.getLogger(__name__)
@@ -590,6 +596,86 @@ def format_currency(amount):
     else:
         return f"${amount:,.2f}"
 
+
+def get_relevant_news(num_articles=5):
+    cache_key = "retail_news_articles"
+    cached_articles = cache.get(cache_key)
+    if cached_articles:
+        logger.info("Returning cached retail news articles")
+        return cached_articles
+
+    newsapi = NewsApiClient(api_key=settings.NEWS_API_KEY)
+    try:
+        logger.info("Fetching retail news from API")
+
+        # Set date range for past month
+        to_date = datetime.now().strftime("%Y-%m-%d")
+        from_date = (datetime.now() - timedelta(days=30)).strftime("%Y-%m-%d")
+
+        logger.info(f"Date range: from {from_date} to {to_date}")
+
+        # First, try to get articles from Retail Dive
+        try:
+            articles = newsapi.get_everything(
+                domains="retaildive.com",
+                from_param=from_date,
+                to=to_date,
+                language="en",
+                sort_by="relevancy",
+                page_size=num_articles,
+            )
+            logger.info(
+                f"Successfully fetched {len(articles.get('articles', []))} articles from Retail Dive"
+            )
+        except Exception as e:
+            logger.error(f"Error fetching articles from Retail Dive: {str(e)}")
+            articles = {"articles": []}
+
+        # If not enough articles from Retail Dive, expand search to other retail sources
+        if len(articles.get("articles", [])) < num_articles:
+            logger.info("Not enough articles from Retail Dive, expanding search")
+            try:
+                additional_articles = newsapi.get_everything(
+                    q="retail OR ecommerce",
+                    from_param=from_date,
+                    to=to_date,
+                    language="en",
+                    sort_by="relevancy",
+                    page_size=num_articles - len(articles.get("articles", [])),
+                )
+                articles["articles"].extend(additional_articles.get("articles", []))
+                logger.info(
+                    f"Successfully fetched {len(additional_articles.get('articles', []))} additional articles"
+                )
+            except Exception as e:
+                logger.error(f"Error fetching additional articles: {str(e)}")
+
+        logger.info(f"Total fetched articles: {len(articles.get('articles', []))}")
+
+        if "articles" not in articles or not articles["articles"]:
+            logger.error(f"No articles found in API response")
+            return []
+
+        cleaned_articles = []
+        for article in articles["articles"][:num_articles]:
+            cleaned_article = {
+                "title": article.get("title", "No title available"),
+                "url": article.get("url", "#"),
+                "source": article.get("source", {}).get("name", "Unknown source"),
+                "published_at": article.get("publishedAt", "No date available"),
+            }
+            cleaned_articles.append(cleaned_article)
+            logger.info(f"Processed article: {cleaned_article}")
+
+        cache.set(cache_key, cleaned_articles, 3600)  # Cache for 1 hour
+        return cleaned_articles
+    except RequestException as e:
+        logger.error(f"Network error fetching news: {str(e)}")
+        return []
+    except Exception as e:
+        logger.error(f"Error fetching news: {str(e)}")
+        return []
+
 """
 
 ================================================================================
@@ -608,11 +694,14 @@ from django.shortcuts import render
 from django.contrib import messages
 from .models import Vendor, Part, Spend, Risk, Activity
 from .forms import VendorForm
-from .utils import log_error
+from .utils import (
+    log_error,
+    format_currency,
+    get_relevant_news,
+)
 from django.views.generic import DetailView
 from django.db.models.functions import Rank
 from django.utils import timezone
-from .utils import format_currency
 from django.db.models import Sum
 
 import logging
@@ -625,21 +714,17 @@ class HomeView(LoginRequiredMixin, TemplateView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-
-        # Dashboard Preview data
         context["total_vendors"] = Vendor.objects.count()
         total_spend = Spend.objects.aggregate(total=Sum("usd_amount"))["total"] or 0
         context["total_spend"] = format_currency(total_spend)
         context["high_risk_vendors"] = Vendor.objects.filter(
             risk__risk_level="HIGH"
         ).count()
-
-        # Recent Activity
         context["recent_activities"] = Activity.objects.all().order_by("-date")[:5]
 
-        # Latest Announcement (you may need to create an Announcement model)
-        # context['latest_announcement'] = Announcement.objects.latest('date').message
-        context["latest_announcement"] = "Welcome to the new Vendor Management System!"
+        news_articles = get_relevant_news()
+        logger.info(f"Fetched {len(news_articles)} articles for the home page")
+        context["news_articles"] = news_articles
 
         return context
 
@@ -1585,28 +1670,44 @@ File: core\templates\core\home.html
             </ul>
         </div>
 
-        <!-- Announcements or News Section -->
+        <!-- Vendor News Section -->
         <div class="bg-white p-6 rounded-lg shadow-md">
-            <h2 class="text-xl font-semibold mb-4 text-navy">Announcements</h2>
-            <div class="bg-yellow-50 border-l-4 border-yellow-400 p-4">
-                <p class="text-sm text-yellow-700">{{ latest_announcement }}</p>
-            </div>
+            <h2 class="text-xl font-semibold mb-4 text-navy">Vendor News</h2>
+            {% if news_articles %}
+            <ul class="space-y-2">
+                {% for article in news_articles %}
+                <li class="border-b border-gray-200 pb-2">
+                    <a href="{{ article.url }}" target="_blank" class="text-blue-600 hover:underline">
+                        {{ article.title|default:"No title available" }}
+                    </a>
+                    <p class="text-xs text-gray-500 mt-1">Source: {{ article.source }}</p>
+                </li>
+                {% empty %}
+                <li class="text-sm text-gray-600">Unable to fetch news at the moment. Please try again later.</li>
+                {% endfor %}
+            </ul>
+            {% else %}
+            <p class="text-sm text-gray-600">No news articles available at the moment. Please check back later.</p>
+            {% endif %}
+        </div>
+
+
+
+
+
+        <!-- Getting Started Section -->
+        <div class="bg-white p-6 rounded-lg shadow-md mb-8">
+            <h2 class="text-xl font-semibold mb-4 text-navy">Getting Started</h2>
+            <p class="mb-4 text-gray-700">New to the Vendor Management System? Follow these steps to get started:</p>
+            <ol class="list-decimal list-inside space-y-2 text-gray-700">
+                <li>Add your vendors to the system</li>
+                <li>Import historical spend data</li>
+                <li>Set up risk assessment criteria</li>
+                <li>Explore the dashboard for insights</li>
+            </ol>
         </div>
     </div>
-
-    <!-- Getting Started Section -->
-    <div class="bg-white p-6 rounded-lg shadow-md mb-8">
-        <h2 class="text-xl font-semibold mb-4 text-navy">Getting Started</h2>
-        <p class="mb-4 text-gray-700">New to the Vendor Management System? Follow these steps to get started:</p>
-        <ol class="list-decimal list-inside space-y-2 text-gray-700">
-            <li>Add your vendors to the system</li>
-            <li>Import historical spend data</li>
-            <li>Set up risk assessment criteria</li>
-            <li>Explore the dashboard for insights</li>
-        </ol>
-    </div>
-</div>
-{% endblock %}
+    {% endblock %}
 """
 
 ================================================================================
@@ -2979,6 +3080,10 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = "django-insecure-(suu2h)7c%z26@zx(qecsctq(+))pyy0db$3que8371@%cnxjf"
+
+NEWS_API_KEY = (
+    "02e33c02bea54e2da6cdb8833f30ecc4"  # Replace with your actual NewsAPI key
+)
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True

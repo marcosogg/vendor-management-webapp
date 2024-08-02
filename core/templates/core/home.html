@@ -51,25 +51,41 @@
             </ul>
         </div>
 
-        <!-- Announcements or News Section -->
+        <!-- Vendor News Section -->
         <div class="bg-white p-6 rounded-lg shadow-md">
-            <h2 class="text-xl font-semibold mb-4 text-navy">Announcements</h2>
-            <div class="bg-yellow-50 border-l-4 border-yellow-400 p-4">
-                <p class="text-sm text-yellow-700">{{ latest_announcement }}</p>
-            </div>
+            <h2 class="text-xl font-semibold mb-4 text-navy">Vendor News</h2>
+            {% if news_articles %}
+            <ul class="space-y-2">
+                {% for article in news_articles %}
+                <li class="border-b border-gray-200 pb-2">
+                    <a href="{{ article.url }}" target="_blank" class="text-blue-600 hover:underline">
+                        {{ article.title|default:"No title available" }}
+                    </a>
+                    <p class="text-xs text-gray-500 mt-1">Source: {{ article.source }}</p>
+                </li>
+                {% empty %}
+                <li class="text-sm text-gray-600">Unable to fetch news at the moment. Please try again later.</li>
+                {% endfor %}
+            </ul>
+            {% else %}
+            <p class="text-sm text-gray-600">No news articles available at the moment. Please check back later.</p>
+            {% endif %}
+        </div>
+
+
+
+
+
+        <!-- Getting Started Section -->
+        <div class="bg-white p-6 rounded-lg shadow-md mb-8">
+            <h2 class="text-xl font-semibold mb-4 text-navy">Getting Started</h2>
+            <p class="mb-4 text-gray-700">New to the Vendor Management System? Follow these steps to get started:</p>
+            <ol class="list-decimal list-inside space-y-2 text-gray-700">
+                <li>Add your vendors to the system</li>
+                <li>Import historical spend data</li>
+                <li>Set up risk assessment criteria</li>
+                <li>Explore the dashboard for insights</li>
+            </ol>
         </div>
     </div>
-
-    <!-- Getting Started Section -->
-    <div class="bg-white p-6 rounded-lg shadow-md mb-8">
-        <h2 class="text-xl font-semibold mb-4 text-navy">Getting Started</h2>
-        <p class="mb-4 text-gray-700">New to the Vendor Management System? Follow these steps to get started:</p>
-        <ol class="list-decimal list-inside space-y-2 text-gray-700">
-            <li>Add your vendors to the system</li>
-            <li>Import historical spend data</li>
-            <li>Set up risk assessment criteria</li>
-            <li>Explore the dashboard for insights</li>
-        </ol>
-    </div>
-</div>
-{% endblock %}
+    {% endblock %}

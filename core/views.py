@@ -10,11 +10,14 @@ from django.shortcuts import render
 from django.contrib import messages
 from .models import Vendor, Part, Spend, Risk, Activity
 from .forms import VendorForm
-from .utils import log_error
+from .utils import (
+    log_error,
+    format_currency,
+    get_relevant_news,
+)
 from django.views.generic import DetailView
 from django.db.models.functions import Rank
 from django.utils import timezone
-from .utils import format_currency
 from django.db.models import Sum
 
 import logging
@@ -27,21 +30,17 @@ class HomeView(LoginRequiredMixin, TemplateView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-
-        # Dashboard Preview data
         context["total_vendors"] = Vendor.objects.count()
         total_spend = Spend.objects.aggregate(total=Sum("usd_amount"))["total"] or 0
         context["total_spend"] = format_currency(total_spend)
         context["high_risk_vendors"] = Vendor.objects.filter(
             risk__risk_level="HIGH"
         ).count()
-
-        # Recent Activity
         context["recent_activities"] = Activity.objects.all().order_by("-date")[:5]
 
-        # Latest Announcement (you may need to create an Announcement model)
-        # context['latest_announcement'] = Announcement.objects.latest('date').message
-        context["latest_announcement"] = "Welcome to the new Vendor Management System!"
+        news_articles = get_relevant_news()
+        logger.info(f"Fetched {len(news_articles)} articles for the home page")
+        context["news_articles"] = news_articles
 
         return context
 
