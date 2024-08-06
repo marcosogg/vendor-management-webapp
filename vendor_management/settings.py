@@ -10,30 +10,25 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.0/ref/settings/
 """
 
+import os
 from pathlib import Path
+from dotenv import load_dotenv
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-
-# Quick-start development settings - unsuitable for production
-# See https://docs.djangoproject.com/en/5.0/howto/deployment/checklist/
+# Load environment variables
+load_dotenv(BASE_DIR / ".env")
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = "django-insecure-(suu2h)7c%z26@zx(qecsctq(+))pyy0db$3que8371@%cnxjf"
-
-NEWS_API_KEY = (
-    "02e33c02bea54e2da6cdb8833f30ecc4"  # Replace with your actual NewsAPI key
-)
+SECRET_KEY = os.getenv("SECRET_KEY")
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = os.getenv("DEBUG", "False") == "True"
 
-ALLOWED_HOSTS = []
-
+ALLOWED_HOSTS = ["localhost", "127.0.0.1"]
 
 # Application definition
-
 INSTALLED_APPS = [
     "django.contrib.admin",
     "django.contrib.auth",
@@ -41,13 +36,16 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
-    "django.contrib.humanize",
-    # My apps
-    "theme",
     "core",
     "data_import",
     "dashboard",
+    "rest_framework",
 ]
+
+
+NEWS_API_KEY = (
+    "02e33c02bea54e2da6cdb8833f30ecc4"  # Replace with your actual NewsAPI key
+)
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
@@ -79,6 +77,9 @@ TEMPLATES = [
 
 WSGI_APPLICATION = "vendor_management.wsgi.application"
 
+
+# Database
+# https://docs.djangoproject.com/en/5.0/ref/settings/#databases
 
 # Database
 # https://docs.djangoproject.com/en/5.0/ref/settings/#databases
@@ -162,3 +163,14 @@ LOGGING = {
 }
 
 TAILWIND_APP_NAME = "theme"
+
+# Add DRF settings
+REST_FRAMEWORK = {
+    "DEFAULT_AUTHENTICATION_CLASSES": [
+        "rest_framework.authentication.SessionAuthentication",
+        "rest_framework.authentication.BasicAuthentication",
+    ],
+    "DEFAULT_PERMISSION_CLASSES": [
+        "rest_framework.permissions.IsAuthenticated",
+    ],
+}

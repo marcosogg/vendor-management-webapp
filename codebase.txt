@@ -9,6 +9,7 @@ Directory structure of included files:
             └── import_models.py
             └── models.py
             └── risk_assessment.py
+            └── serializers.py
             └── tests.py
             └── urls.py
             └── utils.py
@@ -480,6 +481,35 @@ def update_vendor_risk(vendor):
 """
 
 ================================================================================
+File: core\serializers.py
+================================================================================
+"""
+from rest_framework import serializers
+from .models import Vendor, Part, Spend, Risk
+
+class VendorSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Vendor
+        fields = '__all__'
+
+class PartSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Part
+        fields = '__all__'
+
+class SpendSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Spend
+        fields = '__all__'
+
+class RiskSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Risk
+        fields = '__all__'
+
+"""
+
+================================================================================
 File: core\tests.py
 ================================================================================
 """
@@ -545,12 +575,24 @@ class VendorListViewTest(TestCase):
 File: core\urls.py
 ================================================================================
 """
-from django.urls import path
+from django.urls import path, include
 from .views import (
     VendorListView,
     VendorProfileView,
     global_search,
+    VendorViewSet,
+    PartViewSet,
+    SpendViewSet,
+    RiskViewSet,
 )
+from rest_framework.routers import DefaultRouter
+
+
+router = DefaultRouter()
+router.register(r"vendors", VendorViewSet)
+router.register(r"parts", PartViewSet)
+router.register(r"spend", SpendViewSet)
+router.register(r"risk", RiskViewSet)
 
 urlpatterns = [
     path("", VendorListView.as_view(), name="vendor_list"),
@@ -703,6 +745,14 @@ from django.views.generic import DetailView
 from django.db.models.functions import Rank
 from django.utils import timezone
 from django.db.models import Sum
+from .serializers import (
+    VendorSerializer,
+    PartSerializer,
+    SpendSerializer,
+    RiskSerializer,
+)
+from rest_framework import viewsets
+from django.db.models import Prefetch
 
 import logging
 
@@ -935,6 +985,30 @@ def contract_type_distribution(request):
 def risk_distribution(request):
     risk_data = Risk.objects.values("risk_level").annotate(count=Count("risk_level"))
     return JsonResponse(list(risk_data), safe=False)
+
+
+class VendorViewSet(viewsets.ModelViewSet):
+    queryset = Vendor.objects.prefetch_related(
+        Prefetch("parts", queryset=Part.objects.all()),
+        Prefetch("spend_set", queryset=Spend.objects.all()),
+        Prefetch("risk_set", queryset=Risk.objects.all()),
+    )
+    serializer_class = VendorSerializer
+
+
+class PartViewSet(viewsets.ModelViewSet):
+    queryset = Part.objects.select_related("vendor")
+    serializer_class = PartSerializer
+
+
+class SpendViewSet(viewsets.ModelViewSet):
+    queryset = Spend.objects.select_related("vendor")
+    serializer_class = SpendSerializer
+
+
+class RiskViewSet(viewsets.ModelViewSet):
+    queryset = Risk.objects.select_related("vendor")
+    serializer_class = RiskSerializer
 
 """
 
@@ -3069,30 +3143,25 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.0/ref/settings/
 """
 
+import os
 from pathlib import Path
+from dotenv import load_dotenv
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-
-# Quick-start development settings - unsuitable for production
-# See https://docs.djangoproject.com/en/5.0/howto/deployment/checklist/
+# Load environment variables
+load_dotenv(BASE_DIR / ".env")
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = "django-insecure-(suu2h)7c%z26@zx(qecsctq(+))pyy0db$3que8371@%cnxjf"
-
-NEWS_API_KEY = (
-    "02e33c02bea54e2da6cdb8833f30ecc4"  # Replace with your actual NewsAPI key
-)
+SECRET_KEY = os.getenv("SECRET_KEY")
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = os.getenv("DEBUG", "False") == "True"
 
-ALLOWED_HOSTS = []
-
+ALLOWED_HOSTS = ["localhost", "127.0.0.1"]
 
 # Application definition
-
 INSTALLED_APPS = [
     "django.contrib.admin",
     "django.contrib.auth",
@@ -3100,13 +3169,16 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
-    "django.contrib.humanize",
-    # My apps
-    "theme",
     "core",
     "data_import",
     "dashboard",
+    "rest_framework",
 ]
+
+
+NEWS_API_KEY = (
+    "02e33c02bea54e2da6cdb8833f30ecc4"  # Replace with your actual NewsAPI key
+)
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
@@ -3138,6 +3210,9 @@ TEMPLATES = [
 
 WSGI_APPLICATION = "vendor_management.wsgi.application"
 
+
+# Database
+# https://docs.djangoproject.com/en/5.0/ref/settings/#databases
 
 # Database
 # https://docs.djangoproject.com/en/5.0/ref/settings/#databases
@@ -3222,6 +3297,17 @@ LOGGING = {
 
 TAILWIND_APP_NAME = "theme"
 
+# Add DRF settings
+REST_FRAMEWORK = {
+    "DEFAULT_AUTHENTICATION_CLASSES": [
+        "rest_framework.authentication.SessionAuthentication",
+        "rest_framework.authentication.BasicAuthentication",
+    ],
+    "DEFAULT_PERMISSION_CLASSES": [
+        "rest_framework.permissions.IsAuthenticated",
+    ],
+}
+
 """
 
 ================================================================================
@@ -3255,6 +3341,7 @@ from core.views import HomeView  # Import HomeView
 
 urlpatterns = [
     path("admin/", admin.site.urls),
+    path("api/v1/", include("core.urls")),
     path("", HomeView.as_view(), name="home"),  # Use HomeView for root URL
     path("dashboard/", include("dashboard.urls")),
     path("vendors/", include("core.urls")),  # Keep this for vendor-related URLs

@@ -19,6 +19,14 @@ from django.views.generic import DetailView
 from django.db.models.functions import Rank
 from django.utils import timezone
 from django.db.models import Sum
+from .serializers import (
+    VendorSerializer,
+    PartSerializer,
+    SpendSerializer,
+    RiskSerializer,
+)
+from rest_framework import viewsets
+from django.db.models import Prefetch
 
 import logging
 
@@ -251,3 +259,27 @@ def contract_type_distribution(request):
 def risk_distribution(request):
     risk_data = Risk.objects.values("risk_level").annotate(count=Count("risk_level"))
     return JsonResponse(list(risk_data), safe=False)
+
+
+class VendorViewSet(viewsets.ModelViewSet):
+    queryset = Vendor.objects.prefetch_related(
+        Prefetch("parts", queryset=Part.objects.all()),
+        Prefetch("spend_set", queryset=Spend.objects.all()),
+        Prefetch("risk_set", queryset=Risk.objects.all()),
+    )
+    serializer_class = VendorSerializer
+
+
+class PartViewSet(viewsets.ModelViewSet):
+    queryset = Part.objects.select_related("vendor")
+    serializer_class = PartSerializer
+
+
+class SpendViewSet(viewsets.ModelViewSet):
+    queryset = Spend.objects.select_related("vendor")
+    serializer_class = SpendSerializer
+
+
+class RiskViewSet(viewsets.ModelViewSet):
+    queryset = Risk.objects.select_related("vendor")
+    serializer_class = RiskSerializer

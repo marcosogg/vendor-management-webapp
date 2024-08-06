@@ -25,6 +25,7 @@ from core.views import HomeView  # Import HomeView
 
 urlpatterns = [
     path("admin/", admin.site.urls),
+    path("api/v1/", include("core.urls")),
     path("", HomeView.as_view(), name="home"),  # Use HomeView for root URL
     path("dashboard/", include("dashboard.urls")),
     path("vendors/", include("core.urls")),  # Keep this for vendor-related URLs
