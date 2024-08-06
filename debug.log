@@ -1,0 +1,32 @@
+INFO 2024-08-06 15:20:37,077 autoreload 27848 30376 Watching for file changes with StatReloader
+WARNING 2024-08-06 15:20:43,664 base 27848 2016 Session data corrupted
+INFO 2024-08-06 15:20:43,668 basehttp 27848 2016 "GET / HTTP/1.1" 302 0
+WARNING 2024-08-06 15:20:43,692 base 27848 2016 Session data corrupted
+INFO 2024-08-06 15:20:43,707 basehttp 27848 2016 "GET /accounts/login/?next=/ HTTP/1.1" 200 7722
+WARNING 2024-08-06 15:20:48,721 base 27848 2016 Session data corrupted
+INFO 2024-08-06 15:20:48,740 basehttp 27848 2016 "POST /accounts/login/?next=/ HTTP/1.1" 302 0
+INFO 2024-08-06 15:20:48,757 utils 27848 2016 Fetching retail news from API
+INFO 2024-08-06 15:20:48,757 utils 27848 2016 Date range: from 2024-07-07 to 2024-08-06
+INFO 2024-08-06 15:20:49,262 utils 27848 2016 Successfully fetched 5 articles from Retail Dive
+INFO 2024-08-06 15:20:49,263 utils 27848 2016 Total fetched articles: 5
+INFO 2024-08-06 15:20:49,263 utils 27848 2016 Processed article: {'title': 'Rodan and Fields announces new business model, cuts 100 jobs', 'url': 'https://www.retaildive.com/news/rodan-fields-changes-multi-level-marketing-business-model-layoffs/721519/', 'source': 'Retail Dive', 'published_at': '2024-07-17T16:00:00Z'}
+INFO 2024-08-06 15:20:49,264 utils 27848 2016 Processed article: {'title': 'Five Below CEO Joel Anderson resigns', 'url': 'https://www.retaildive.com/news/five-below-ceo-joel-anderson-resigns-kenneth-bull/721585/', 'source': 'Retail Dive', 'published_at': '2024-07-17T16:34:00Z'}
+INFO 2024-08-06 15:20:49,264 utils 27848 2016 Processed article: {'title': 'How retailers can engage the modern deskless worker', 'url': 'https://www.retaildive.com/spons/how-retailers-can-engage-the-modern-deskless-worker/719988/', 'source': 'Retail Dive', 'published_at': '2024-07-08T09:00:00Z'}
+INFO 2024-08-06 15:20:49,264 utils 27848 2016 Processed article: {'title': 'NRF: 85% of back-to-school buyers plan to shop Prime Day', 'url': 'https://www.retaildive.com/news/back-to-school-shoppers-amazon-prime-day/721321/', 'source': 'Retail Dive', 'published_at': '2024-07-15T15:42:00Z'}
+INFO 2024-08-06 15:20:49,265 utils 27848 2016 Processed article: {'title': 'Rite Aid confirms cybersecurity breach', 'url': 'https://www.retaildive.com/news/rite-aid-cybersecurity-customer-data-breach/721393/', 'source': 'Retail Dive', 'published_at': '2024-07-16T14:49:00Z'}
+INFO 2024-08-06 15:20:49,265 views 27848 2016 Fetched 5 articles for the home page
+INFO 2024-08-06 15:20:49,269 basehttp 27848 2016 "GET / HTTP/1.1" 200 12545
+INFO 2024-08-06 15:20:53,949 basehttp 27848 29984 "GET /dashboard/ HTTP/1.1" 200 27352
+INFO 2024-08-06 15:20:54,161 basehttp 27848 29984 "GET /dashboard/api/dashboard-data/?date_range=1&sort_relationship=total HTTP/1.1" 200 1308
+INFO 2024-08-06 15:21:00,833 basehttp 27848 29984 "GET /vendors/ HTTP/1.1" 200 24187
+INFO 2024-08-06 15:21:02,772 basehttp 27848 29984 "GET /vendors/227/ HTTP/1.1" 200 18712
+INFO 2024-08-06 15:21:06,059 utils 27848 29984 Returning cached retail news articles
+INFO 2024-08-06 15:21:06,060 views 27848 29984 Fetched 5 articles for the home page
+INFO 2024-08-06 15:21:06,064 basehttp 27848 29984 "GET / HTTP/1.1" 200 12545
+INFO 2024-08-06 15:21:11,337 basehttp 27848 29984 "GET /dashboard/ HTTP/1.1" 200 27352
+INFO 2024-08-06 15:21:11,491 basehttp 27848 29984 "GET /dashboard/api/dashboard-data/?date_range=1&sort_relationship=total HTTP/1.1" 200 1308
+INFO 2024-08-06 15:21:13,777 basehttp 27848 29984 "GET /dashboard/api/dashboard-data/?date_range=1&sort_relationship=total HTTP/1.1" 200 1308
+INFO 2024-08-06 15:21:25,466 basehttp 27848 29984 "GET /dashboard/ HTTP/1.1" 200 27352
+INFO 2024-08-06 15:21:25,636 basehttp 27848 29984 "GET /dashboard/api/dashboard-data/?date_range=1&sort_relationship=total HTTP/1.1" 200 1308
+INFO 2024-08-06 15:21:26,752 basehttp 27848 29984 "GET /vendors/ HTTP/1.1" 200 24187
+INFO 2024-08-06 15:21:28,225 basehttp 27848 29984 "GET /vendors/1/ HTTP/1.1" 200 19304
