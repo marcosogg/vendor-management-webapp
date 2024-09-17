@@ -1,80 +1,78 @@
 {% extends 'base.html' %}
 {% load static %}
 
+{% block title %}Dashboard - Vendor Management{% endblock %}
+
 {% block content %}
-<h1 class="text-3xl font-bold mb-6">Vendor Management Dashboard</h1>
+<h1 class="text-3xl font-bold mb-6 text-navy">Vendor Management Dashboard</h1>
 
 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-    <div class="bg-white p-4 rounded shadow">
-        <h2 class="text-lg font-semibold mb-2">Total Vendors</h2>
+    <div class="bg-white p-4 rounded shadow dashboard-card">
+        <h2 class="text-lg font-semibold mb-2 text-navy">Total Vendors</h2>
         <p class="text-3xl" id="total-vendors">{{ total_vendors }}</p>
     </div>
-    <div class="bg-white p-4 rounded shadow">
-        <h2 class="text-lg font-semibold mb-2">Total Spend</h2>
+    <div class="bg-white p-4 rounded shadow dashboard-card">
+        <h2 class="text-lg font-semibold mb-2 text-navy">Total Spend</h2>
         <p class="text-3xl" id="total-spend">{{ total_spend }}</p>
     </div>
-    <div class="bg-white p-4 rounded shadow">
-        <h2 class="text-lg font-semibold mb-2">Avg Risk Score</h2>
+    <div class="bg-white p-4 rounded shadow dashboard-card">
+        <h2 class="text-lg font-semibold mb-2 text-navy">Avg Risk Score</h2>
         <p class="text-3xl" id="avg-risk-score">{{ avg_risk_score|floatformat:2 }}</p>
     </div>
-    <div class="bg-white p-4 rounded shadow">
-        <h2 class="text-lg font-semibold mb-2">High Risk Vendors</h2>
-        <p class="text-3xl" id="high-risk-vendors">Loading...</p>
-    </div>
-</div>
-<div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
-    <div class="bg-white p-4 rounded shadow">
-        <h2 class="text-lg font-semibold mb-2">Avg Rating</h2>
-        <p class="text-3xl" id="avg-rating">Loading...</p>
-    </div>
-    <div class="bg-white p-4 rounded shadow">
-        <h2 class="text-lg font-semibold mb-2">Avg Discount</h2>
-        <p class="text-3xl" id="avg-discount">Loading...</p>
+    <div class="bg-white p-4 rounded shadow dashboard-card">
+        <h2 class="text-lg font-semibold mb-2 text-navy">High Risk Vendors</h2>
+        <p class="text-3xl" id="high-risk-vendors">{{ high_risk_vendors }}</p>
     </div>
 </div>
 
-<div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
-    <div class="bg-white p-4 rounded shadow">
-        <h2 class="text-lg font-semibold mb-2 text-navy">Risk Distribution</h2>
-        <canvas id="risk-chart"></canvas>
-    </div>
-    <div class="bg-white p-4 rounded shadow">
-        <h2 class="text-lg font-semibold mb-2 text-navy">Spend by Year</h2>
-        <div class="mb-2">
-            <button id="toggle-spend-chart" class="bg-light-blue text-white px-2 py-1 rounded">Toggle Chart
-                Type</button>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+    <div class="bg-white p-4 rounded shadow dashboard-card">
+        <h2 class="text-xl font-semibold mb-4 text-navy">Risk Distribution</h2>
+        <div class="chart-container">
+            <canvas id="risk-chart"></canvas>
         </div>
-        <canvas id="spend-chart"></canvas>
     </div>
-    <div class="bg-white p-4 rounded shadow">
-        <h2 class="text-lg font-semibold mb-2 text-navy">Spend by Relationship Type</h2>
+    <div class="bg-white p-4 rounded shadow dashboard-card">
+        <h2 class="text-xl font-semibold mb-4 text-navy">Spend by Year</h2>
+        <div class="chart-container">
+            <canvas id="spend-chart"></canvas>
+        </div>
+    </div>
+    <div class="bg-white p-4 rounded shadow dashboard-card">
+        <h2 class="text-xl font-semibold mb-4 text-navy">Spend by Relationship Type</h2>
         <div class="mb-2">
             <select id="sort-relationship-chart" class="border rounded px-2 py-1">
                 <option value="total">Sort by Total Spend</option>
                 <option value="alphabetical">Sort Alphabetically</option>
             </select>
         </div>
-        <canvas id="relationship-chart"></canvas>
+        <div class="chart-container">
+            <canvas id="relationship-chart"></canvas>
+        </div>
     </div>
-    <div class="bg-white p-4 rounded shadow">
-        <h2 class="text-lg font-semibold mb-2 text-navy">Contract Type Distribution</h2>
-        <canvas id="contract-chart"></canvas>
+    <div class="bg-white p-4 rounded shadow dashboard-card">
+        <h2 class="text-xl font-semibold mb-4 text-navy">Contract Type Distribution</h2>
+        <div class="chart-container">
+            <canvas id="contract-chart"></canvas>
+        </div>
     </div>
-    <div class="bg-white p-4 rounded shadow">
-        <h2 class="text-lg font-semibold mb-2 text-navy">Geographical Distribution</h2>
-        <canvas id="geo-chart"></canvas>
+    <div class="bg-white p-4 rounded shadow dashboard-card">
+        <h2 class="text-xl font-semibold mb-4 text-navy">Geographical Distribution</h2>
+        <div class="chart-container">
+            <canvas id="geo-chart"></canvas>
+        </div>
     </div>
-    <div class="bg-white p-4 rounded shadow">
-        <h2 class="text-lg font-semibold mb-2 text-navy">Top 10 Countries</h2>
+    <div class="bg-white p-4 rounded shadow dashboard-card">
+        <h2 class="text-xl font-semibold mb-4 text-navy">Top 10 Countries</h2>
         <ul id="top-countries-list" class="list-disc pl-5"></ul>
     </div>
 </div>
 
-<div class="bg-white p-4 rounded shadow mb-8">
-    <h2 class="text-lg font-semibold mb-2">Recent Activity</h2>
-    <ul>
+<div class="bg-white p-4 rounded shadow dashboard-card mb-8">
+    <h2 class="text-xl font-semibold mb-4 text-navy">Recent Activity</h2>
+    <ul id="recent-activities">
         {% for activity in recent_activities %}
-        <li>{{ activity.date|date:"Y-m-d H:i" }} - {{ activity.action }} - {{ activity.details }}</li>
+        <li class="mb-2">{{ activity.date|date:"Y-m-d H:i" }} - {{ activity.action }} - {{ activity.details }}</li>
         {% endfor %}
     </ul>
 </div>
@@ -92,29 +90,17 @@
 {% endblock %}
 
 {% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
     document.addEventListener('DOMContentLoaded', function () {
-        if (typeof Chart !== 'undefined' && Chart.Geo) {
-            Chart.register(Chart.Geo);
-        } else {
-            console.error('ChartGeo is not loaded. Choropleth chart will not be available.');
-        }
-
         let spendChart, relationshipChart, riskChart, contractChart, geoChart;
-        let spendChartType = 'line';
 
         function fetchDashboardData() {
             const dateRange = document.getElementById('date-range').value;
             const sortRelationship = document.getElementById('sort-relationship-chart').value;
             fetch(`/dashboard/api/dashboard-data/?date_range=${dateRange}&sort_relationship=${sortRelationship}`)
-                .then(response => {
-                    if (!response.ok) {
-                        throw new Error(`HTTP error! status: ${response.status}`);
-                    }
-                    return response.json();
-                })
+                .then(response => response.json())
                 .then(data => {
-                    console.log('Received dashboard data:', data);
                     updateDashboard(data);
                 })
                 .catch(error => {
@@ -123,17 +109,14 @@
                 });
         }
 
-
         function updateDashboard(data) {
             updateSummaryCards(data);
-            if (data.risk_distribution) updateRiskChart(data.risk_distribution);
-            if (data.spend_by_year) updateSpendChart(data.spend_by_year);
-            if (data.spend_by_relationship) updateRelationshipChart(data.spend_by_relationship);
-            if (data.contract_distribution) updateContractChart(data.contract_distribution);
-            if (data.geographical_distribution) {
-                updateGeoChart(data.geographical_distribution);
-                updateTopCountriesList(data.geographical_distribution);
-            }
+            updateRiskChart(data.risk_distribution);
+            updateSpendChart(data.spend_by_year);
+            updateRelationshipChart(data.spend_by_relationship);
+            updateContractChart(data.contract_distribution);
+            updateGeoChart(data.geographical_distribution);
+            updateTopCountriesList(data.geographical_distribution);
         }
 
         function updateSummaryCards(data) {
@@ -141,8 +124,6 @@
             document.getElementById('total-spend').textContent = data.total_spend || 'N/A';
             document.getElementById('avg-risk-score').textContent = parseFloat(data.avg_risk_score || 0).toFixed(2);
             document.getElementById('high-risk-vendors').textContent = data.high_risk_vendors || 'N/A';
-            document.getElementById('avg-rating').textContent = parseFloat(data.vendor_performance?.avg_rating || 0).toFixed(2);
-            document.getElementById('avg-discount').textContent = parseFloat(data.vendor_performance?.avg_discount || 0).toFixed(2) + '%';
         }
 
         function updateRiskChart(riskData) {
@@ -172,16 +153,9 @@
                         legend: {
                             position: 'right',
                         },
-                        tooltip: {
-                            callbacks: {
-                                label: function (context) {
-                                    const label = context.label || '';
-                                    const value = context.parsed || 0;
-                                    const total = context.dataset.data.reduce((a, b) => a + b, 0);
-                                    const percentage = ((value / total) * 100).toFixed(1);
-                                    return `${label}: ${value} (${percentage}%)`;
-                                }
-                            }
+                        title: {
+                            display: true,
+                            text: 'Risk Distribution'
                         }
                     }
                 }
@@ -196,15 +170,13 @@
             }
 
             spendChart = new Chart(ctx, {
-                type: spendChartType,
+                type: 'bar',
                 data: {
                     labels: spendData.map(item => item.year),
                     datasets: [{
                         label: 'Total Spend',
                         data: spendData.map(item => item.total_spend),
-                        borderColor: '#38D4FF',
-                        backgroundColor: 'rgba(56, 212, 255, 0.2)',
-                        tension: 0.1
+                        backgroundColor: '#38D4FF',
                     }]
                 },
                 options: {
@@ -219,19 +191,12 @@
                         }
                     },
                     plugins: {
-                        tooltip: {
-                            callbacks: {
-                                label: function (context) {
-                                    let label = context.dataset.label || '';
-                                    if (label) {
-                                        label += ': ';
-                                    }
-                                    if (context.parsed.y !== null) {
-                                        label += new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(context.parsed.y);
-                                    }
-                                    return label;
-                                }
-                            }
+                        legend: {
+                            display: false
+                        },
+                        title: {
+                            display: true,
+                            text: 'Spend by Year'
                         }
                     }
                 }
@@ -267,19 +232,12 @@
                         }
                     },
                     plugins: {
-                        tooltip: {
-                            callbacks: {
-                                label: function (context) {
-                                    let label = context.dataset.label || '';
-                                    if (label) {
-                                        label += ': ';
-                                    }
-                                    if (context.parsed.y !== null) {
-                                        label += new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(context.parsed.y);
-                                    }
-                                    return label;
-                                }
-                            }
+                        legend: {
+                            display: false
+                        },
+                        title: {
+                            display: true,
+                            text: 'Spend by Relationship Type'
                         }
                     }
                 }
@@ -308,16 +266,9 @@
                         legend: {
                             position: 'right',
                         },
-                        tooltip: {
-                            callbacks: {
-                                label: function (context) {
-                                    const label = context.label || '';
-                                    const value = context.parsed || 0;
-                                    const total = context.dataset.data.reduce((a, b) => a + b, 0);
-                                    const percentage = ((value / total) * 100).toFixed(1);
-                                    return `${label}: ${value} (${percentage}%)`;
-                                }
-                            }
+                        title: {
+                            display: true,
+                            text: 'Contract Type Distribution'
                         }
                     }
                 }
@@ -331,88 +282,39 @@
                 geoChart.destroy();
             }
 
-            if (typeof Chart !== 'undefined' && Chart.Geo) {
-                // Prepare data for the chart
-                const data = Object.entries(geoData).map(([country, count]) => ({
-                    country: country,
-                    value: count
-                }));
-
-                geoChart = new Chart(ctx, {
-                    type: 'choropleth',
-                    data: {
-                        labels: data.map(d => d.country),
-                        datasets: [{
-                            label: 'Vendors per Country',
-                            data: data.map(d => ({ feature: d.country, value: d.value })),
-                        }]
-                    },
-                    options: {
-                        showOutline: true,
-                        showGraticule: true,
-                        plugins: {
-                            legend: {
-                                display: false
-                            },
-                            tooltip: {
-                                callbacks: {
-                                    label: function (context) {
-                                        let label = context.feature || '';
-                                        if (label) {
-                                            label += ': ';
-                                        }
-                                        if (context.formattedValue !== null) {
-                                            label += context.formattedValue + ' vendors';
-                                        }
-                                        return label;
-                                    }
-                                }
-                            }
+            const sortedData = Object.entries(geoData).sort((a, b) => b[1] - a[1]).slice(0, 10);
+            geoChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: sortedData.map(d => d[0]),
+                    datasets: [{
+                        label: 'Vendors per Country',
+                        data: sortedData.map(d => d[1]),
+                        backgroundColor: 'rgba(75, 192, 192, 0.6)',
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            display: false
                         },
-                        scales: {
-                            projection: {
-                                axis: 'x',
-                                projection: 'equalEarth'
-                            }
+                        title: {
+                            display: true,
+                            text: 'Top 10 Countries by Vendor Count'
                         }
-                    }
-                });
-            } else {
-                // Fallback to a bar chart if ChartGeo is not available
-                const sortedData = Object.entries(geoData).sort((a, b) => b[1] - a[1]).slice(0, 10);
-                geoChart = new Chart(ctx, {
-                    type: 'bar',
-                    data: {
-                        labels: sortedData.map(d => d[0]),
-                        datasets: [{
-                            label: 'Vendors per Country',
-                            data: sortedData.map(d => d[1]),
-                            backgroundColor: 'rgba(75, 192, 192, 0.6)',
-                        }]
                     },
-                    options: {
-                        responsive: true,
-                        plugins: {
-                            legend: {
-                                display: false
-                            },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
                             title: {
                                 display: true,
-                                text: 'Top 10 Countries by Vendor Count'
-                            }
-                        },
-                        scales: {
-                            y: {
-                                beginAtZero: true,
-                                title: {
-                                    display: true,
-                                    text: 'Number of Vendors'
-                                }
+                                text: 'Number of Vendors'
                             }
                         }
                     }
-                });
-            }
+                }
+            });
         }
 
         function updateTopCountriesList(geoData) {
@@ -430,13 +332,7 @@
             });
         }
 
-        document.getElementById('toggle-spend-chart').addEventListener('click', function () {
-            spendChartType = spendChartType === 'line' ? 'bar' : 'line';
-            fetchDashboardData();
-        });
-
         document.getElementById('sort-relationship-chart').addEventListener('change', fetchDashboardData);
-
         document.getElementById('date-range').addEventListener('change', fetchDashboardData);
 
         document.getElementById('export-btn').addEventListener('click', function () {

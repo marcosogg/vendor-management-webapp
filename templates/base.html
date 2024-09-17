@@ -67,6 +67,24 @@
         .transition-all {
             transition: all 0.3s ease-in-out;
         }
+
+        /* Existing styles... */
+
+        .dashboard-card {
+            transition: all 0.3s ease-in-out;
+        }
+
+        .dashboard-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .chart-container {
+            position: relative;
+            margin: auto;
+            height: 300px;
+            width: 100%;
+        }
     </style>
     <!-- Stylesheets first -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/chart.js@3.7.1/dist/chart.min.css">

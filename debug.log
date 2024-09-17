@@ -30,3 +30,388 @@ INFO 2024-08-06 15:21:25,466 basehttp 27848 29984 "GET /dashboard/ HTTP/1.1" 200
 INFO 2024-08-06 15:21:25,636 basehttp 27848 29984 "GET /dashboard/api/dashboard-data/?date_range=1&sort_relationship=total HTTP/1.1" 200 1308
 INFO 2024-08-06 15:21:26,752 basehttp 27848 29984 "GET /vendors/ HTTP/1.1" 200 24187
 INFO 2024-08-06 15:21:28,225 basehttp 27848 29984 "GET /vendors/1/ HTTP/1.1" 200 19304
+INFO 2024-08-06 15:38:17,400 autoreload 27540 28324 Watching for file changes with StatReloader
+INFO 2024-08-06 15:38:22,487 utils 27540 27020 Fetching retail news from API
+INFO 2024-08-06 15:38:22,487 utils 27540 27020 Date range: from 2024-07-07 to 2024-08-06
+INFO 2024-08-06 15:38:22,716 utils 27540 27020 Successfully fetched 5 articles from Retail Dive
+INFO 2024-08-06 15:38:22,716 utils 27540 27020 Total fetched articles: 5
+INFO 2024-08-06 15:38:22,716 utils 27540 27020 Processed article: {'title': 'Rodan and Fields announces new business model, cuts 100 jobs', 'url': 'https://www.retaildive.com/news/rodan-fields-changes-multi-level-marketing-business-model-layoffs/721519/', 'source': 'Retail Dive', 'published_at': '2024-07-17T16:00:00Z'}
+INFO 2024-08-06 15:38:22,725 utils 27540 27020 Processed article: {'title': 'Five Below CEO Joel Anderson resigns', 'url': 'https://www.retaildive.com/news/five-below-ceo-joel-anderson-resigns-kenneth-bull/721585/', 'source': 'Retail Dive', 'published_at': '2024-07-17T16:34:00Z'}
+INFO 2024-08-06 15:38:22,725 utils 27540 27020 Processed article: {'title': 'How retailers can engage the modern deskless worker', 'url': 'https://www.retaildive.com/spons/how-retailers-can-engage-the-modern-deskless-worker/719988/', 'source': 'Retail Dive', 'published_at': '2024-07-08T09:00:00Z'}
+INFO 2024-08-06 15:38:22,725 utils 27540 27020 Processed article: {'title': 'NRF: 85% of back-to-school buyers plan to shop Prime Day', 'url': 'https://www.retaildive.com/news/back-to-school-shoppers-amazon-prime-day/721321/', 'source': 'Retail Dive', 'published_at': '2024-07-15T15:42:00Z'}
+INFO 2024-08-06 15:38:22,725 utils 27540 27020 Processed article: {'title': 'Rite Aid confirms cybersecurity breach', 'url': 'https://www.retaildive.com/news/rite-aid-cybersecurity-customer-data-breach/721393/', 'source': 'Retail Dive', 'published_at': '2024-07-16T14:49:00Z'}
+INFO 2024-08-06 15:38:22,725 views 27540 27020 Fetched 5 articles for the home page
+INFO 2024-08-06 15:38:22,755 basehttp 27540 27020 "GET / HTTP/1.1" 200 12948
+INFO 2024-08-06 15:38:25,603 basehttp 27540 27020 "GET /dashboard/ HTTP/1.1" 200 22401
+INFO 2024-08-06 15:38:25,786 basehttp 27540 27020 "GET /dashboard/api/dashboard-data/?date_range=1&sort_relationship=total HTTP/1.1" 200 1308
+INFO 2024-08-06 15:38:51,848 basehttp 27540 29436 "GET /admin HTTP/1.1" 301 0
+INFO 2024-08-06 15:38:51,919 basehttp 27540 27132 "GET /admin/ HTTP/1.1" 200 12511
+INFO 2024-08-06 15:38:52,236 basehttp 27540 27132 "GET /static/admin/css/base.css HTTP/1.1" 200 21544
+INFO 2024-08-06 15:38:52,246 basehttp 27540 27132 "GET /static/admin/js/nav_sidebar.js HTTP/1.1" 200 3063
+INFO 2024-08-06 15:38:52,251 basehttp 27540 11840 "GET /static/admin/css/dark_mode.css HTTP/1.1" 200 2682
+INFO 2024-08-06 15:38:52,287 basehttp 27540 2800 "GET /static/admin/css/nav_sidebar.css HTTP/1.1" 200 2810
+INFO 2024-08-06 15:38:52,296 basehttp 27540 10140 "GET /static/admin/css/dashboard.css HTTP/1.1" 200 441
+INFO 2024-08-06 15:38:52,309 basehttp 27540 29628 "GET /static/admin/css/responsive.css HTTP/1.1" 200 17905
+INFO 2024-08-06 15:38:52,322 basehttp 27540 22640 "GET /static/admin/js/theme.js HTTP/1.1" 200 1943
+INFO 2024-08-06 15:38:52,324 basehttp 27540 10140 "GET /static/admin/img/icon-changelink.svg HTTP/1.1" 200 380
+INFO 2024-08-06 15:38:52,325 basehttp 27540 29628 "GET /static/admin/img/icon-addlink.svg HTTP/1.1" 200 331
+INFO 2024-08-06 15:38:52,325 basehttp 27540 2800 "GET /static/admin/img/icon-deletelink.svg HTTP/1.1" 200 392
+WARNING 2024-08-06 15:38:52,421 log 27540 29628 Not Found: /favicon.ico
+WARNING 2024-08-06 15:38:52,422 basehttp 27540 29628 "GET /favicon.ico HTTP/1.1" 404 3053
+INFO 2024-08-06 15:38:56,592 basehttp 27540 29628 "GET /admin/core/vendor/ HTTP/1.1" 200 42564
+INFO 2024-08-06 15:38:56,620 basehttp 27540 29628 "GET /static/admin/css/changelists.css HTTP/1.1" 200 6811
+INFO 2024-08-06 15:38:56,621 basehttp 27540 11840 "GET /static/admin/js/core.js HTTP/1.1" 200 6208
+INFO 2024-08-06 15:38:56,621 basehttp 27540 27132 "GET /static/admin/js/admin/RelatedObjectLookups.js HTTP/1.1" 200 9042
+INFO 2024-08-06 15:38:56,626 basehttp 27540 22640 "GET /static/admin/js/jquery.init.js HTTP/1.1" 200 347
+INFO 2024-08-06 15:38:56,634 basehttp 27540 10140 "GET /static/admin/js/vendor/jquery/jquery.js HTTP/1.1" 200 285314
+INFO 2024-08-06 15:38:56,666 basehttp 27540 29628 "GET /static/admin/js/actions.js HTTP/1.1" 200 8067
+INFO 2024-08-06 15:38:56,681 basehttp 27540 27132 "GET /static/admin/js/prepopulate.js HTTP/1.1" 200 1531
+INFO 2024-08-06 15:38:56,707 basehttp 27540 11840 "GET /static/admin/js/urlify.js HTTP/1.1" 200 7887
+INFO 2024-08-06 15:38:56,710 basehttp 27540 22640 "GET /static/admin/js/vendor/xregexp/xregexp.js HTTP/1.1" 200 325171
+INFO 2024-08-06 15:38:56,768 basehttp 27540 2800 "GET /admin/jsi18n/ HTTP/1.1" 200 3342
+INFO 2024-08-06 15:38:56,777 basehttp 27540 22640 "GET /static/admin/js/filters.js HTTP/1.1" 200 978
+INFO 2024-08-06 15:38:56,857 basehttp 27540 22640 "GET /static/admin/img/tooltag-add.svg HTTP/1.1" 200 331
+INFO 2024-08-06 15:38:58,986 basehttp 27540 22640 "GET /admin/core/vendor/680/change/ HTTP/1.1" 200 16639
+INFO 2024-08-06 15:38:59,024 basehttp 27540 2800 "GET /static/admin/js/prepopulate_init.js HTTP/1.1" 200 586
+INFO 2024-08-06 15:38:59,037 basehttp 27540 11840 "GET /admin/jsi18n/ HTTP/1.1" 200 3342
+INFO 2024-08-06 15:38:59,039 basehttp 27540 22640 "GET /static/admin/css/forms.css HTTP/1.1" 200 9090
+INFO 2024-08-06 15:38:59,068 basehttp 27540 22640 "GET /static/admin/css/widgets.css HTTP/1.1" 200 11800
+INFO 2024-08-06 15:38:59,087 basehttp 27540 11840 "GET /static/admin/js/change_form.js HTTP/1.1" 200 606
+INFO 2024-08-06 15:39:03,397 basehttp 27540 28440 "GET /admin/core/risk/ HTTP/1.1" 200 43270
+INFO 2024-08-06 15:39:03,419 basehttp 27540 28440 "GET /admin/jsi18n/ HTTP/1.1" 200 3342
+INFO 2024-08-06 15:39:05,320 basehttp 27540 28440 "GET /admin/core/risk/682/change/ HTTP/1.1" 200 60937
+INFO 2024-08-06 15:39:05,347 basehttp 27540 28440 "GET /static/admin/img/icon-viewlink.svg HTTP/1.1" 200 581
+INFO 2024-08-06 15:39:05,359 basehttp 27540 29056 "GET /admin/jsi18n/ HTTP/1.1" 200 3342
+INFO 2024-08-06 15:39:08,200 basehttp 27540 29056 "POST /admin/core/risk/682/change/ HTTP/1.1" 302 0
+INFO 2024-08-06 15:39:08,278 basehttp 27540 29056 "GET /admin/core/risk/ HTTP/1.1" 200 43486
+INFO 2024-08-06 15:39:08,308 basehttp 27540 29056 "GET /admin/jsi18n/ HTTP/1.1" 200 3342
+INFO 2024-08-06 15:39:08,357 basehttp 27540 29056 "GET /static/admin/img/icon-yes.svg HTTP/1.1" 200 436
+INFO 2024-08-06 15:39:10,430 basehttp 27540 29056 "GET /admin/core/risk/680/change/ HTTP/1.1" 200 60953
+INFO 2024-08-06 15:39:10,455 basehttp 27540 29056 "GET /admin/jsi18n/ HTTP/1.1" 200 3342
+INFO 2024-08-06 15:39:14,050 basehttp 27540 28056 "POST /admin/core/risk/680/change/ HTTP/1.1" 302 0
+INFO 2024-08-06 15:39:14,131 basehttp 27540 28056 "GET /admin/core/risk/ HTTP/1.1" 200 43484
+INFO 2024-08-06 15:39:14,158 basehttp 27540 28056 "GET /admin/jsi18n/ HTTP/1.1" 200 3342
+INFO 2024-08-06 15:39:15,701 basehttp 27540 28056 "GET /admin/core/risk/656/change/ HTTP/1.1" 200 60994
+INFO 2024-08-06 15:39:15,816 basehttp 27540 28056 "GET /admin/jsi18n/ HTTP/1.1" 200 3342
+INFO 2024-08-06 15:39:19,075 basehttp 27540 28056 "POST /admin/core/risk/656/change/ HTTP/1.1" 302 0
+INFO 2024-08-06 15:39:19,154 basehttp 27540 28056 "GET /admin/core/risk/ HTTP/1.1" 200 43503
+INFO 2024-08-06 15:39:19,182 basehttp 27540 28056 "GET /admin/jsi18n/ HTTP/1.1" 200 3342
+INFO 2024-08-06 15:39:21,112 basehttp 27540 28056 "GET /admin/core/risk/ HTTP/1.1" 200 43270
+INFO 2024-08-06 15:39:21,151 basehttp 27540 28056 "GET /admin/jsi18n/ HTTP/1.1" 200 3342
+INFO 2024-08-06 15:39:22,916 basehttp 27540 30652 "GET /admin/core/risk/647/change/ HTTP/1.1" 200 60992
+INFO 2024-08-06 15:39:22,968 basehttp 27540 30652 "GET /admin/jsi18n/ HTTP/1.1" 200 3342
+INFO 2024-08-06 15:39:25,863 basehttp 27540 30652 "POST /admin/core/risk/647/change/ HTTP/1.1" 302 0
+INFO 2024-08-06 15:39:25,942 basehttp 27540 30652 "GET /admin/core/risk/ HTTP/1.1" 200 43495
+INFO 2024-08-06 15:39:25,988 basehttp 27540 30652 "GET /admin/jsi18n/ HTTP/1.1" 200 3342
+INFO 2024-08-06 15:39:28,866 basehttp 27540 30652 "GET /dashboard/ HTTP/1.1" 200 22401
+INFO 2024-08-06 15:39:29,125 basehttp 27540 30652 "GET /dashboard/api/dashboard-data/?date_range=1&sort_relationship=total HTTP/1.1" 200 1308
+INFO 2024-08-06 15:39:42,161 basehttp 27540 25804 "GET /dashboard/ HTTP/1.1" 200 22401
+INFO 2024-08-06 15:39:42,339 basehttp 27540 25804 "GET /dashboard/api/dashboard-data/?date_range=1&sort_relationship=total HTTP/1.1" 200 1308
+INFO 2024-08-06 15:39:43,004 basehttp 27540 25804 "GET /vendors/ HTTP/1.1" 200 24590
+INFO 2024-08-06 15:39:44,405 basehttp 27540 25804 "GET /vendors/1/ HTTP/1.1" 200 19707
+INFO 2024-08-06 16:04:00,664 autoreload 14668 14648 Watching for file changes with StatReloader
+INFO 2024-08-06 16:04:07,257 utils 14668 8168 Fetching retail news from API
+INFO 2024-08-06 16:04:07,258 utils 14668 8168 Date range: from 2024-07-07 to 2024-08-06
+INFO 2024-08-06 16:04:07,755 utils 14668 8168 Successfully fetched 5 articles from Retail Dive
+INFO 2024-08-06 16:04:07,755 utils 14668 8168 Total fetched articles: 5
+INFO 2024-08-06 16:04:07,756 utils 14668 8168 Processed article: {'title': 'Rodan and Fields announces new business model, cuts 100 jobs', 'url': 'https://www.retaildive.com/news/rodan-fields-changes-multi-level-marketing-business-model-layoffs/721519/', 'source': 'Retail Dive', 'published_at': '2024-07-17T16:00:00Z'}
+INFO 2024-08-06 16:04:07,756 utils 14668 8168 Processed article: {'title': 'Five Below CEO Joel Anderson resigns', 'url': 'https://www.retaildive.com/news/five-below-ceo-joel-anderson-resigns-kenneth-bull/721585/', 'source': 'Retail Dive', 'published_at': '2024-07-17T16:34:00Z'}
+INFO 2024-08-06 16:04:07,758 utils 14668 8168 Processed article: {'title': 'How retailers can engage the modern deskless worker', 'url': 'https://www.retaildive.com/spons/how-retailers-can-engage-the-modern-deskless-worker/719988/', 'source': 'Retail Dive', 'published_at': '2024-07-08T09:00:00Z'}
+INFO 2024-08-06 16:04:07,758 utils 14668 8168 Processed article: {'title': 'NRF: 85% of back-to-school buyers plan to shop Prime Day', 'url': 'https://www.retaildive.com/news/back-to-school-shoppers-amazon-prime-day/721321/', 'source': 'Retail Dive', 'published_at': '2024-07-15T15:42:00Z'}
+INFO 2024-08-06 16:04:07,758 utils 14668 8168 Processed article: {'title': 'Rite Aid confirms cybersecurity breach', 'url': 'https://www.retaildive.com/news/rite-aid-cybersecurity-customer-data-breach/721393/', 'source': 'Retail Dive', 'published_at': '2024-07-16T14:49:00Z'}
+INFO 2024-08-06 16:04:07,759 views 14668 8168 Fetched 5 articles for the home page
+INFO 2024-08-06 16:04:07,784 basehttp 14668 8168 "GET / HTTP/1.1" 200 12948
+INFO 2024-08-06 16:04:16,005 basehttp 14668 10052 "POST /accounts/logout/ HTTP/1.1" 302 0
+INFO 2024-08-06 16:04:16,062 basehttp 14668 10052 "GET /accounts/login/ HTTP/1.1" 200 8125
+INFO 2024-08-06 16:04:18,756 basehttp 14668 10052 "GET /accounts/login/ HTTP/1.1" 200 8125
+INFO 2024-08-06 16:04:26,820 basehttp 14668 31692 "GET /admin/ HTTP/1.1" 302 0
+INFO 2024-08-06 16:04:26,900 basehttp 14668 31692 "GET /admin/login/?next=/admin/ HTTP/1.1" 200 4158
+INFO 2024-08-06 16:04:27,095 basehttp 14668 31692 "GET /static/admin/css/login.css HTTP/1.1" 200 958
+INFO 2024-08-06 16:04:36,202 basehttp 14668 29372 "POST /admin/login/?next=/admin/ HTTP/1.1" 302 0
+INFO 2024-08-06 16:04:36,230 basehttp 14668 29372 "GET /admin/ HTTP/1.1" 200 12639
+INFO 2024-08-06 16:04:38,123 basehttp 14668 29372 "GET /admin/auth/user/ HTTP/1.1" 200 14031
+INFO 2024-08-06 16:04:38,154 basehttp 14668 29372 "GET /admin/jsi18n/ HTTP/1.1" 200 3342
+INFO 2024-08-06 16:04:38,191 basehttp 14668 11068 "GET /static/admin/img/search.svg HTTP/1.1" 200 458
+INFO 2024-08-06 16:04:38,217 basehttp 14668 29372 "GET /static/admin/img/icon-no.svg HTTP/1.1" 200 560
+INFO 2024-08-06 16:04:38,245 basehttp 14668 14140 "GET /static/admin/img/sorting-icons.svg HTTP/1.1" 200 1097
+INFO 2024-08-06 16:04:41,947 basehttp 14668 14140 "GET /admin/auth/user/add/ HTTP/1.1" 200 12705
+INFO 2024-08-06 16:04:41,977 basehttp 14668 14140 "GET /admin/jsi18n/ HTTP/1.1" 200 3342
+INFO 2024-08-06 16:04:50,195 basehttp 14668 7896 "POST /admin/auth/user/add/ HTTP/1.1" 200 13005
+INFO 2024-08-06 16:04:50,225 basehttp 14668 7896 "GET /admin/jsi18n/ HTTP/1.1" 200 3342
+INFO 2024-08-06 16:05:09,844 basehttp 14668 4180 "POST /admin/auth/user/add/ HTTP/1.1" 302 0
+INFO 2024-08-06 16:05:10,016 basehttp 14668 4180 "GET /admin/auth/user/3/change/ HTTP/1.1" 200 25513
+INFO 2024-08-06 16:05:10,054 basehttp 14668 4180 "GET /admin/jsi18n/ HTTP/1.1" 200 3342
+INFO 2024-08-06 16:05:10,055 basehttp 14668 30120 "GET /static/admin/js/calendar.js HTTP/1.1" 200 9141
+INFO 2024-08-06 16:05:10,056 basehttp 14668 29484 "GET /static/admin/js/SelectFilter2.js HTTP/1.1" 200 15492
+INFO 2024-08-06 16:05:10,057 basehttp 14668 23888 "GET /static/admin/js/admin/DateTimeShortcuts.js HTTP/1.1" 200 19319
+INFO 2024-08-06 16:05:10,061 basehttp 14668 5972 "GET /static/admin/js/SelectBox.js HTTP/1.1" 200 4530
+INFO 2024-08-06 16:05:10,156 basehttp 14668 5972 "GET /static/admin/img/icon-unknown.svg HTTP/1.1" 200 655
+INFO 2024-08-06 16:05:10,172 basehttp 14668 23888 "GET /static/admin/img/selector-icons.svg HTTP/1.1" 200 3291
+INFO 2024-08-06 16:05:10,176 basehttp 14668 4180 "GET /static/admin/img/icon-clock.svg HTTP/1.1" 200 677
+INFO 2024-08-06 16:05:10,182 basehttp 14668 30120 "GET /static/admin/img/icon-calendar.svg HTTP/1.1" 200 1086
+INFO 2024-08-06 16:05:10,184 basehttp 14668 29484 "GET /static/admin/img/icon-unknown-alt.svg HTTP/1.1" 200 655
+WARNING 2024-08-06 16:05:24,202 log 14668 31144 Forbidden (CSRF token from POST incorrect.): /accounts/login/
+WARNING 2024-08-06 16:05:24,203 basehttp 14668 31144 "POST /accounts/login/ HTTP/1.1" 403 2517
+INFO 2024-08-06 16:05:27,356 basehttp 14668 12720 "GET /accounts/login/ HTTP/1.1" 200 8442
+INFO 2024-08-06 16:05:31,790 basehttp 14668 12720 "POST /accounts/login/ HTTP/1.1" 302 0
+INFO 2024-08-06 16:05:31,808 basehttp 14668 12720 "GET /dashboard/ HTTP/1.1" 200 22401
+INFO 2024-08-06 16:05:32,044 basehttp 14668 12720 "GET /dashboard/api/dashboard-data/?date_range=1&sort_relationship=total HTTP/1.1" 200 1308
+WARNING 2024-08-06 16:05:40,769 log 14668 30768 Forbidden (CSRF token from POST incorrect.): /admin/auth/user/3/change/
+WARNING 2024-08-06 16:05:40,770 basehttp 14668 30768 "POST /admin/auth/user/3/change/ HTTP/1.1" 403 2517
+INFO 2024-08-06 16:05:44,074 basehttp 14668 30768 "GET /admin/auth/user/3/change/ HTTP/1.1" 200 25293
+INFO 2024-08-06 16:05:54,051 utils 14668 29932 Returning cached retail news articles
+INFO 2024-08-06 16:05:54,051 views 14668 29932 Fetched 5 articles for the home page
+INFO 2024-08-06 16:05:54,055 basehttp 14668 29932 "GET / HTTP/1.1" 200 12948
+INFO 2024-08-06 16:08:08,167 basehttp 14668 11840 "GET /dashboard/ HTTP/1.1" 200 22401
+INFO 2024-08-06 16:08:08,489 basehttp 14668 11840 "GET /dashboard/api/dashboard-data/?date_range=1&sort_relationship=total HTTP/1.1" 200 1308
+INFO 2024-08-06 16:10:40,888 basehttp 14668 19096 "GET /vendors/ HTTP/1.1" 200 24590
+INFO 2024-08-06 16:10:57,618 basehttp 14668 15464 "GET /vendors/?search=&relationship_type=DIRECT&risk_level=MEDIUM&sort_by=vendor_name&sort_order=asc HTTP/1.1" 200 24692
+INFO 2024-08-06 16:11:01,392 basehttp 14668 15464 "GET /vendors/?search=&relationship_type=DIRECT&risk_level=MEDIUM&sort_by=vendor_name&sort_order=asc HTTP/1.1" 200 24692
+INFO 2024-08-06 16:11:02,368 basehttp 14668 15464 "GET /vendors/?search=&relationship_type=DIRECT&risk_level=MEDIUM&sort_by=vendor_name&sort_order=asc HTTP/1.1" 200 24692
+INFO 2024-08-06 16:11:03,188 basehttp 14668 15464 "GET /vendors/?search=&relationship_type=DIRECT&risk_level=MEDIUM&sort_by=vendor_name&sort_order=asc HTTP/1.1" 200 24692
+INFO 2024-08-06 16:11:04,886 basehttp 14668 15464 "GET /vendors/?search=&relationship_type=DIRECT&risk_level=HIGH&sort_by=vendor_name&sort_order=asc HTTP/1.1" 200 17856
+INFO 2024-08-06 16:11:07,826 basehttp 14668 16100 "GET /vendors/679/ HTTP/1.1" 200 19051
+INFO 2024-08-06 16:11:32,416 basehttp 14668 5968 "GET /vendors/ HTTP/1.1" 200 24590
+INFO 2024-08-06 16:11:36,213 basehttp 14668 5968 "GET /vendors/?search=direct&relationship_type=&risk_level=&sort_by=vendor_name&sort_order=asc HTTP/1.1" 200 18047
+INFO 2024-08-06 16:11:39,420 basehttp 14668 10992 "GET /vendors/355/ HTTP/1.1" 200 29346
+INFO 2024-08-06 16:14:21,633 basehttp 14668 15052 "GET /import/ HTTP/1.1" 200 9154
+INFO 2024-08-06 16:15:07,986 basehttp 14668 9680 "GET /vendors/ HTTP/1.1" 200 24590
+INFO 2024-08-06 16:16:55,651 utils 14668 9680 Returning cached retail news articles
+INFO 2024-08-06 16:16:55,652 views 14668 9680 Fetched 5 articles for the home page
+INFO 2024-08-06 16:16:55,655 basehttp 14668 9680 "GET / HTTP/1.1" 200 12948
+INFO 2024-08-07 11:38:39,788 basehttp 14668 30516 "GET /static/favicon.ico HTTP/1.1" 304 0
+INFO 2024-08-07 12:27:33,670 utils 14668 30104 Fetching retail news from API
+INFO 2024-08-07 12:27:33,672 utils 14668 30104 Date range: from 2024-07-08 to 2024-08-07
+INFO 2024-08-07 12:27:34,260 utils 14668 30104 Successfully fetched 5 articles from Retail Dive
+INFO 2024-08-07 12:27:34,261 utils 14668 30104 Total fetched articles: 5
+INFO 2024-08-07 12:27:34,261 utils 14668 30104 Processed article: {'title': 'Rodan and Fields announces new business model, cuts 100 jobs', 'url': 'https://www.retaildive.com/news/rodan-fields-changes-multi-level-marketing-business-model-layoffs/721519/', 'source': 'Retail Dive', 'published_at': '2024-07-17T16:00:00Z'}
+INFO 2024-08-07 12:27:34,261 utils 14668 30104 Processed article: {'title': 'Five Below CEO Joel Anderson resigns', 'url': 'https://www.retaildive.com/news/five-below-ceo-joel-anderson-resigns-kenneth-bull/721585/', 'source': 'Retail Dive', 'published_at': '2024-07-17T16:34:00Z'}
+INFO 2024-08-07 12:27:34,262 utils 14668 30104 Processed article: {'title': 'How retailers can engage the modern deskless worker', 'url': 'https://www.retaildive.com/spons/how-retailers-can-engage-the-modern-deskless-worker/719988/', 'source': 'Retail Dive', 'published_at': '2024-07-08T09:00:00Z'}
+INFO 2024-08-07 12:27:34,263 utils 14668 30104 Processed article: {'title': 'NRF: 85% of back-to-school buyers plan to shop Prime Day', 'url': 'https://www.retaildive.com/news/back-to-school-shoppers-amazon-prime-day/721321/', 'source': 'Retail Dive', 'published_at': '2024-07-15T15:42:00Z'}
+INFO 2024-08-07 12:27:34,263 utils 14668 30104 Processed article: {'title': 'Rite Aid confirms cybersecurity breach', 'url': 'https://www.retaildive.com/news/rite-aid-cybersecurity-customer-data-breach/721393/', 'source': 'Retail Dive', 'published_at': '2024-07-16T14:49:00Z'}
+INFO 2024-08-07 12:27:34,264 views 14668 30104 Fetched 5 articles for the home page
+INFO 2024-08-07 12:27:34,281 basehttp 14668 30104 "GET / HTTP/1.1" 200 12948
+INFO 2024-08-07 12:30:29,115 basehttp 14668 30104 "GET /dashboard/ HTTP/1.1" 200 22401
+INFO 2024-08-07 12:30:29,357 basehttp 14668 30104 "GET /dashboard/api/dashboard-data/?date_range=1&sort_relationship=total HTTP/1.1" 200 1308
+INFO 2024-08-07 12:30:48,073 basehttp 14668 30104 "GET /vendors/ HTTP/1.1" 200 24590
+INFO 2024-08-07 12:31:03,761 basehttp 14668 30104 "GET /import/ HTTP/1.1" 200 9154
+INFO 2024-08-07 12:31:24,319 basehttp 14668 30104 "GET /vendors/ HTTP/1.1" 200 24590
+INFO 2024-08-07 12:31:25,781 basehttp 14668 30104 "GET /vendors/1/ HTTP/1.1" 200 19707
+INFO 2024-08-07 12:32:24,179 utils 14668 30104 Returning cached retail news articles
+INFO 2024-08-07 12:32:24,180 views 14668 30104 Fetched 5 articles for the home page
+INFO 2024-08-07 12:32:24,183 basehttp 14668 30104 "GET / HTTP/1.1" 200 12948
+INFO 2024-08-07 12:32:26,328 basehttp 14668 30104 "GET /dashboard/ HTTP/1.1" 200 22401
+INFO 2024-08-07 12:32:26,539 basehttp 14668 30104 "GET /dashboard/api/dashboard-data/?date_range=1&sort_relationship=total HTTP/1.1" 200 1308
+INFO 2024-08-07 12:32:27,015 basehttp 14668 30104 "GET /vendors/ HTTP/1.1" 200 24590
+INFO 2024-08-07 12:32:30,042 basehttp 14668 30104 "GET /vendors/1/ HTTP/1.1" 200 19707
+INFO 2024-08-07 12:32:47,643 basehttp 14668 30104 "GET /import/ HTTP/1.1" 200 9154
+INFO 2024-08-07 12:33:10,773 utils 14668 30104 Returning cached retail news articles
+INFO 2024-08-07 12:33:10,774 views 14668 30104 Fetched 5 articles for the home page
+INFO 2024-08-07 12:33:10,782 basehttp 14668 30104 "GET / HTTP/1.1" 200 12948
+INFO 2024-08-07 12:33:13,215 basehttp 14668 30104 "GET /import/ HTTP/1.1" 200 9154
+INFO 2024-09-06 11:24:52,213 autoreload 26480 25100 Watching for file changes with StatReloader
+INFO 2024-09-06 11:24:58,172 basehttp 26480 18744 "GET / HTTP/1.1" 302 0
+INFO 2024-09-06 11:24:58,346 basehttp 26480 18744 "GET /accounts/login/?next=/ HTTP/1.1" 200 8125
+INFO 2024-09-06 11:24:59,575 basehttp 26480 18744 "GET /static/favicon.ico HTTP/1.1" 200 0
+INFO 2024-09-06 11:25:01,512 basehttp 26480 18744 "GET /dashboard/ HTTP/1.1" 302 0
+INFO 2024-09-06 11:25:01,516 basehttp 26480 18744 "GET /accounts/login/?next=/dashboard/ HTTP/1.1" 200 8125
+INFO 2024-09-06 11:25:03,343 basehttp 26480 18744 "GET / HTTP/1.1" 302 0
+INFO 2024-09-06 11:25:03,343 basehttp 26480 18744 "GET /accounts/login/?next=/ HTTP/1.1" 200 8125
+INFO 2024-09-06 11:26:25,790 basehttp 26480 18744 "GET /admin HTTP/1.1" 301 0
+INFO 2024-09-06 11:26:25,833 basehttp 26480 25752 "GET /admin/ HTTP/1.1" 302 0
+INFO 2024-09-06 11:26:25,979 basehttp 26480 25752 "GET /admin/login/?next=/admin/ HTTP/1.1" 200 4323
+INFO 2024-09-06 11:26:26,009 basehttp 26480 25752 "GET /static/admin/css/base.css HTTP/1.1" 200 21544
+INFO 2024-09-06 11:26:26,013 basehttp 26480 10260 "GET /static/admin/css/nav_sidebar.css HTTP/1.1" 200 2810
+INFO 2024-09-06 11:26:26,014 basehttp 26480 13404 "GET /static/admin/css/dark_mode.css HTTP/1.1" 200 2682
+INFO 2024-09-06 11:26:26,015 basehttp 26480 16784 "GET /static/admin/css/login.css HTTP/1.1" 200 958
+INFO 2024-09-06 11:26:26,015 basehttp 26480 364 "GET /static/admin/css/responsive.css HTTP/1.1" 200 17905
+INFO 2024-09-06 11:26:26,060 basehttp 26480 16784 "GET /static/admin/js/nav_sidebar.js HTTP/1.1" 200 3063
+INFO 2024-09-06 11:26:26,060 basehttp 26480 364 "GET /static/admin/js/theme.js HTTP/1.1" 200 1943
+INFO 2024-09-06 11:26:26,065 basehttp 26480 13404 "GET /static/admin/img/icon-alert.svg HTTP/1.1" 200 504
+WARNING 2024-09-06 11:26:26,145 log 26480 13404 Not Found: /favicon.ico
+WARNING 2024-09-06 11:26:26,145 basehttp 26480 13404 "GET /favicon.ico HTTP/1.1" 404 3053
+INFO 2024-09-06 11:26:34,045 basehttp 26480 13404 "POST /admin/login/?next=/admin/ HTTP/1.1" 302 0
+INFO 2024-09-06 11:26:34,062 basehttp 26480 13404 "GET /admin/ HTTP/1.1" 200 12669
+INFO 2024-09-06 11:26:34,096 basehttp 26480 13404 "GET /static/admin/css/dashboard.css HTTP/1.1" 200 441
+INFO 2024-09-06 11:26:34,133 basehttp 26480 364 "GET /static/admin/img/icon-deletelink.svg HTTP/1.1" 200 392
+INFO 2024-09-06 11:26:34,133 basehttp 26480 16784 "GET /static/admin/img/icon-changelink.svg HTTP/1.1" 200 380
+INFO 2024-09-06 11:26:34,133 basehttp 26480 13404 "GET /static/admin/img/icon-addlink.svg HTTP/1.1" 200 331
+INFO 2024-09-06 11:26:38,306 basehttp 26480 16784 "GET /admin/auth/user/ HTTP/1.1" 200 14468
+INFO 2024-09-06 11:26:38,334 basehttp 26480 16784 "GET /static/admin/css/changelists.css HTTP/1.1" 200 6811
+INFO 2024-09-06 11:26:38,339 basehttp 26480 10260 "GET /static/admin/js/jquery.init.js HTTP/1.1" 200 347
+INFO 2024-09-06 11:26:38,340 basehttp 26480 25752 "GET /static/admin/js/core.js HTTP/1.1" 200 6208
+INFO 2024-09-06 11:26:38,343 basehttp 26480 20072 "GET /static/admin/js/admin/RelatedObjectLookups.js HTTP/1.1" 200 9042
+INFO 2024-09-06 11:26:38,347 basehttp 26480 16784 "GET /static/admin/js/actions.js HTTP/1.1" 200 8067
+INFO 2024-09-06 11:26:38,351 basehttp 26480 364 "GET /static/admin/js/vendor/jquery/jquery.js HTTP/1.1" 200 285314
+INFO 2024-09-06 11:26:38,353 basehttp 26480 25752 "GET /static/admin/js/prepopulate.js HTTP/1.1" 200 1531
+INFO 2024-09-06 11:26:38,354 basehttp 26480 13404 "GET /admin/jsi18n/ HTTP/1.1" 200 3342
+INFO 2024-09-06 11:26:38,354 basehttp 26480 10260 "GET /static/admin/js/urlify.js HTTP/1.1" 200 7887
+INFO 2024-09-06 11:26:38,359 basehttp 26480 16784 "GET /static/admin/img/search.svg HTTP/1.1" 200 458
+INFO 2024-09-06 11:26:38,360 basehttp 26480 364 "GET /static/admin/img/icon-yes.svg HTTP/1.1" 200 436
+INFO 2024-09-06 11:26:38,364 basehttp 26480 20072 "GET /static/admin/js/vendor/xregexp/xregexp.js HTTP/1.1" 200 325171
+INFO 2024-09-06 11:26:38,384 basehttp 26480 20072 "GET /static/admin/img/icon-no.svg HTTP/1.1" 200 560
+INFO 2024-09-06 11:26:38,397 basehttp 26480 20072 "GET /static/admin/js/filters.js HTTP/1.1" 200 978
+INFO 2024-09-06 11:26:38,415 basehttp 26480 16784 "GET /static/admin/img/icon-viewlink.svg HTTP/1.1" 200 581
+INFO 2024-09-06 11:26:38,415 basehttp 26480 20072 "GET /static/admin/img/tooltag-add.svg HTTP/1.1" 200 331
+INFO 2024-09-06 11:26:38,416 basehttp 26480 364 "GET /static/admin/img/sorting-icons.svg HTTP/1.1" 200 1097
+INFO 2024-09-06 11:26:43,262 basehttp 26480 364 "GET /admin/auth/user/1/change/ HTTP/1.1" 200 25345
+INFO 2024-09-06 11:26:43,295 basehttp 26480 364 "GET /static/admin/css/forms.css HTTP/1.1" 200 9090
+INFO 2024-09-06 11:26:43,297 basehttp 26480 10260 "GET /static/admin/js/SelectBox.js HTTP/1.1" 200 4530
+INFO 2024-09-06 11:26:43,301 basehttp 26480 13404 "GET /static/admin/js/admin/DateTimeShortcuts.js HTTP/1.1" 200 19319
+INFO 2024-09-06 11:26:43,301 basehttp 26480 16784 "GET /static/admin/js/calendar.js HTTP/1.1" 200 9141
+INFO 2024-09-06 11:26:43,301 basehttp 26480 25752 "GET /static/admin/js/SelectFilter2.js HTTP/1.1" 200 15492
+INFO 2024-09-06 11:26:43,302 basehttp 26480 20072 "GET /admin/jsi18n/ HTTP/1.1" 200 3342
+INFO 2024-09-06 11:26:43,305 basehttp 26480 364 "GET /static/admin/js/prepopulate_init.js HTTP/1.1" 200 586
+INFO 2024-09-06 11:26:43,338 basehttp 26480 364 "GET /static/admin/css/widgets.css HTTP/1.1" 200 11800
+INFO 2024-09-06 11:26:43,343 basehttp 26480 20072 "GET /static/admin/js/change_form.js HTTP/1.1" 200 606
+INFO 2024-09-06 11:26:43,403 basehttp 26480 20072 "GET /static/admin/img/icon-unknown.svg HTTP/1.1" 200 655
+INFO 2024-09-06 11:26:43,404 basehttp 26480 364 "GET /static/admin/img/selector-icons.svg HTTP/1.1" 200 3291
+INFO 2024-09-06 11:26:43,406 basehttp 26480 16784 "GET /static/admin/img/icon-calendar.svg HTTP/1.1" 200 1086
+INFO 2024-09-06 11:26:43,414 basehttp 26480 13404 "GET /static/admin/img/icon-unknown-alt.svg HTTP/1.1" 200 655
+INFO 2024-09-06 11:26:43,431 basehttp 26480 25752 "GET /static/admin/img/icon-clock.svg HTTP/1.1" 200 677
+INFO 2024-09-06 11:27:15,823 basehttp 26480 25752 "GET /admin/auth/user/add/ HTTP/1.1" 200 12705
+INFO 2024-09-06 11:27:15,859 basehttp 26480 25752 "GET /admin/jsi18n/ HTTP/1.1" 200 3342
+INFO 2024-09-06 11:27:54,800 basehttp 26480 25752 "POST /admin/auth/user/add/ HTTP/1.1" 302 0
+INFO 2024-09-06 11:27:54,940 basehttp 26480 25752 "GET /admin/auth/user/4/change/ HTTP/1.1" 200 25518
+INFO 2024-09-06 11:27:54,985 basehttp 26480 25752 "GET /admin/jsi18n/ HTTP/1.1" 200 3342
+INFO 2024-09-06 11:28:00,749 basehttp 26480 25752 "GET /admin/login/?next=/admin/ HTTP/1.1" 302 0
+INFO 2024-09-06 11:28:00,760 basehttp 26480 25752 "GET /admin/ HTTP/1.1" 200 12643
+INFO 2024-09-06 11:28:02,062 basehttp 26480 25752 "GET /accounts/login/?next=/ HTTP/1.1" 200 8442
+INFO 2024-09-06 11:28:17,187 basehttp 26480 25752 "POST /accounts/login/?next=/ HTTP/1.1" 302 0
+INFO 2024-09-06 11:28:17,209 utils 26480 25752 Fetching retail news from API
+INFO 2024-09-06 11:28:17,209 utils 26480 25752 Date range: from 2024-08-07 to 2024-09-06
+INFO 2024-09-06 11:28:17,469 utils 26480 25752 Successfully fetched 5 articles from Retail Dive
+INFO 2024-09-06 11:28:17,469 utils 26480 25752 Total fetched articles: 5
+INFO 2024-09-06 11:28:17,469 utils 26480 25752 Processed article: {'title': 'Amazon Prime Day drives the most loyalty among summer sales events', 'url': 'https://www.retaildive.com/news/amazon-prime-day-shopper-loyalty-summer-sales-events/723821/', 'source': 'Retail Dive', 'published_at': '2024-08-12T12:19:00Z'}
+INFO 2024-09-06 11:28:17,469 utils 26480 25752 Processed article: {'title': 'Lowe’s rebrands media network as it expands channel offerings', 'url': 'https://www.retaildive.com/news/lowes-rebrands-media-network-expands-advertising-channels/724063/', 'source': 'Retail Dive', 'published_at': '2024-08-13T15:29:00Z'}
+INFO 2024-09-06 11:28:17,469 utils 26480 25752 Processed article: {'title': 'LL Flooring files for bankruptcy with plans to close 94 stores', 'url': 'https://www.retaildive.com/news/ll-flooring-chapter-11-bankruptcy-store-closures/723956/', 'source': 'Retail Dive', 'published_at': '2024-08-12T17:34:00Z'}
+INFO 2024-09-06 11:28:17,469 utils 26480 25752 Processed article: {'title': 'Store closures a factor in Allbirds Q2 sales nosedive', 'url': 'https://www.retaildive.com/news/allbirds-second-quarter-sales-nosedive-store-closures/723683/', 'source': 'Retail Dive', 'published_at': '2024-08-08T15:40:00Z'}
+INFO 2024-09-06 11:28:17,469 utils 26480 25752 Processed article: {'title': 'Funko delivers first sales growth, profit in almost 2 years', 'url': 'https://www.retaildive.com/news/funko-first-sales-growth-profit-two-years-earnings/723817/', 'source': 'Retail Dive', 'published_at': '2024-08-09T16:30:00Z'}
+INFO 2024-09-06 11:28:17,469 views 26480 25752 Fetched 5 articles for the home page
+INFO 2024-09-06 11:28:17,487 basehttp 26480 25752 "GET / HTTP/1.1" 200 13022
+INFO 2024-09-06 11:28:47,186 basehttp 26480 6460 "GET /dashboard/ HTTP/1.1" 200 22402
+INFO 2024-09-06 11:28:47,453 basehttp 26480 6460 "GET /dashboard/api/dashboard-data/?date_range=1&sort_relationship=total HTTP/1.1" 200 1308
+INFO 2024-09-06 11:28:51,268 basehttp 26480 23520 "GET /vendors/ HTTP/1.1" 200 24591
+INFO 2024-09-06 11:28:54,725 basehttp 26480 23520 "GET /import/ HTTP/1.1" 200 9155
+INFO 2024-09-06 11:28:57,311 utils 26480 23520 Returning cached retail news articles
+INFO 2024-09-06 11:28:57,312 views 26480 23520 Fetched 5 articles for the home page
+INFO 2024-09-06 11:28:57,313 basehttp 26480 23520 "GET / HTTP/1.1" 200 13022
+INFO 2024-09-09 20:46:11,750 autoreload 392 20852 Watching for file changes with StatReloader
+INFO 2024-09-09 20:46:19,950 basehttp 392 13724 "GET / HTTP/1.1" 302 0
+INFO 2024-09-09 20:46:20,134 basehttp 392 13724 "GET /accounts/login/?next=/ HTTP/1.1" 200 8125
+INFO 2024-09-09 20:46:21,111 basehttp 392 23656 "GET /static/favicon.ico HTTP/1.1" 200 0
+INFO 2024-09-09 20:46:36,733 basehttp 392 14032 "GET /admin HTTP/1.1" 301 0
+INFO 2024-09-09 20:46:36,783 basehttp 392 13544 "GET /admin/ HTTP/1.1" 302 0
+INFO 2024-09-09 20:46:36,910 basehttp 392 13544 "GET /admin/login/?next=/admin/ HTTP/1.1" 200 4158
+INFO 2024-09-09 20:46:36,934 basehttp 392 13544 "GET /static/admin/css/base.css HTTP/1.1" 200 21544
+INFO 2024-09-09 20:46:36,948 basehttp 392 1792 "GET /static/admin/css/dark_mode.css HTTP/1.1" 200 2682
+INFO 2024-09-09 20:46:36,949 basehttp 392 15284 "GET /static/admin/css/nav_sidebar.css HTTP/1.1" 200 2810
+INFO 2024-09-09 20:46:36,949 basehttp 392 13544 "GET /static/admin/css/login.css HTTP/1.1" 200 958
+INFO 2024-09-09 20:46:36,951 basehttp 392 13532 "GET /static/admin/css/responsive.css HTTP/1.1" 200 17905
+INFO 2024-09-09 20:46:36,978 basehttp 392 13544 "GET /static/admin/js/nav_sidebar.js HTTP/1.1" 200 3063
+INFO 2024-09-09 20:46:36,980 basehttp 392 13532 "GET /static/admin/js/theme.js HTTP/1.1" 200 1943
+WARNING 2024-09-09 20:46:37,074 log 392 13532 Not Found: /favicon.ico
+WARNING 2024-09-09 20:46:37,074 basehttp 392 13532 "GET /favicon.ico HTTP/1.1" 404 3053
+INFO 2024-09-09 20:46:43,127 basehttp 392 21160 "POST /admin/login/?next=/admin/ HTTP/1.1" 302 0
+INFO 2024-09-09 20:46:43,157 basehttp 392 21160 "GET /admin/ HTTP/1.1" 200 12643
+INFO 2024-09-09 20:46:43,186 basehttp 392 21160 "GET /static/admin/css/dashboard.css HTTP/1.1" 200 441
+INFO 2024-09-09 20:46:43,230 basehttp 392 21160 "GET /static/admin/img/icon-addlink.svg HTTP/1.1" 200 331
+INFO 2024-09-09 20:46:43,231 basehttp 392 21004 "GET /static/admin/img/icon-changelink.svg HTTP/1.1" 200 380
+INFO 2024-09-09 20:46:43,233 basehttp 392 28476 "GET /static/admin/img/icon-deletelink.svg HTTP/1.1" 200 392
+INFO 2024-09-09 20:46:45,129 basehttp 392 28476 "GET /admin/auth/user/ HTTP/1.1" 200 14907
+INFO 2024-09-09 20:46:45,160 basehttp 392 28476 "GET /static/admin/css/changelists.css HTTP/1.1" 200 6811
+INFO 2024-09-09 20:46:45,165 basehttp 392 27216 "GET /static/admin/js/jquery.init.js HTTP/1.1" 200 347
+INFO 2024-09-09 20:46:45,165 basehttp 392 17584 "GET /static/admin/js/core.js HTTP/1.1" 200 6208
+INFO 2024-09-09 20:46:45,167 basehttp 392 17620 "GET /static/admin/js/admin/RelatedObjectLookups.js HTTP/1.1" 200 9042
+INFO 2024-09-09 20:46:45,172 basehttp 392 28476 "GET /static/admin/js/actions.js HTTP/1.1" 200 8067
+INFO 2024-09-09 20:46:45,175 basehttp 392 21160 "GET /static/admin/js/vendor/jquery/jquery.js HTTP/1.1" 200 285314
+INFO 2024-09-09 20:46:45,178 basehttp 392 17584 "GET /static/admin/js/urlify.js HTTP/1.1" 200 7887
+INFO 2024-09-09 20:46:45,181 basehttp 392 21004 "GET /admin/jsi18n/ HTTP/1.1" 200 3342
+INFO 2024-09-09 20:46:45,181 basehttp 392 27216 "GET /static/admin/js/prepopulate.js HTTP/1.1" 200 1531
+INFO 2024-09-09 20:46:45,189 basehttp 392 17620 "GET /static/admin/js/vendor/xregexp/xregexp.js HTTP/1.1" 200 325171
+INFO 2024-09-09 20:46:45,190 basehttp 392 21160 "GET /static/admin/img/search.svg HTTP/1.1" 200 458
+INFO 2024-09-09 20:46:45,194 basehttp 392 28476 "GET /static/admin/img/icon-yes.svg HTTP/1.1" 200 436
+INFO 2024-09-09 20:46:45,215 basehttp 392 28476 "GET /static/admin/img/icon-no.svg HTTP/1.1" 200 560
+INFO 2024-09-09 20:46:45,218 basehttp 392 21160 "GET /static/admin/js/filters.js HTTP/1.1" 200 978
+INFO 2024-09-09 20:46:45,249 basehttp 392 17620 "GET /static/admin/img/icon-viewlink.svg HTTP/1.1" 200 581
+INFO 2024-09-09 20:46:45,250 basehttp 392 21160 "GET /static/admin/img/tooltag-add.svg HTTP/1.1" 200 331
+INFO 2024-09-09 20:46:45,251 basehttp 392 28476 "GET /static/admin/img/sorting-icons.svg HTTP/1.1" 200 1097
+INFO 2024-09-09 20:46:50,132 basehttp 392 28476 "GET /admin/auth/user/4/change/ HTTP/1.1" 200 25333
+INFO 2024-09-09 20:46:50,167 basehttp 392 28476 "GET /static/admin/css/forms.css HTTP/1.1" 200 9090
+INFO 2024-09-09 20:46:50,167 basehttp 392 27216 "GET /static/admin/js/SelectBox.js HTTP/1.1" 200 4530
+INFO 2024-09-09 20:46:50,168 basehttp 392 21004 "GET /static/admin/js/admin/DateTimeShortcuts.js HTTP/1.1" 200 19319
+INFO 2024-09-09 20:46:50,172 basehttp 392 17620 "GET /admin/jsi18n/ HTTP/1.1" 200 3342
+INFO 2024-09-09 20:46:50,172 basehttp 392 21160 "GET /static/admin/js/calendar.js HTTP/1.1" 200 9141
+INFO 2024-09-09 20:46:50,173 basehttp 392 17584 "GET /static/admin/js/SelectFilter2.js HTTP/1.1" 200 15492
+INFO 2024-09-09 20:46:50,179 basehttp 392 27216 "GET /static/admin/js/prepopulate_init.js HTTP/1.1" 200 586
+INFO 2024-09-09 20:46:50,204 basehttp 392 27216 "GET /static/admin/css/widgets.css HTTP/1.1" 200 11800
+INFO 2024-09-09 20:46:50,208 basehttp 392 17584 "GET /static/admin/js/change_form.js HTTP/1.1" 200 606
+INFO 2024-09-09 20:46:50,282 basehttp 392 12344 "GET /static/admin/img/selector-icons.svg HTTP/1.1" 200 3291
+INFO 2024-09-09 20:46:50,290 basehttp 392 1672 "GET /static/admin/img/icon-unknown.svg HTTP/1.1" 200 655
+INFO 2024-09-09 20:46:50,301 basehttp 392 7396 "GET /static/admin/img/icon-unknown-alt.svg HTTP/1.1" 200 655
+INFO 2024-09-09 20:46:50,309 basehttp 392 5700 "GET /static/admin/img/icon-calendar.svg HTTP/1.1" 200 1086
+INFO 2024-09-09 20:46:50,327 basehttp 392 23072 "GET /static/admin/img/icon-clock.svg HTTP/1.1" 200 677
+INFO 2024-09-09 20:46:57,127 basehttp 392 23072 "GET /admin/auth/user/ HTTP/1.1" 200 14907
+INFO 2024-09-09 20:46:57,779 basehttp 392 23072 "GET /admin/ HTTP/1.1" 200 12643
+INFO 2024-09-09 20:46:59,291 basehttp 392 23072 "GET /admin/login/?next=/admin/ HTTP/1.1" 302 0
+INFO 2024-09-09 20:46:59,344 basehttp 392 23072 "GET /admin/ HTTP/1.1" 200 12643
+INFO 2024-09-09 20:47:01,713 basehttp 392 27624 "GET /accounts/login/?next=/ HTTP/1.1" 200 8442
+INFO 2024-09-09 20:47:06,662 basehttp 392 27624 "POST /accounts/login/?next=/ HTTP/1.1" 302 0
+INFO 2024-09-09 20:47:06,679 utils 392 27624 Fetching retail news from API
+INFO 2024-09-09 20:47:06,680 utils 392 27624 Date range: from 2024-08-10 to 2024-09-09
+INFO 2024-09-09 20:47:06,974 utils 392 27624 Successfully fetched 5 articles from Retail Dive
+INFO 2024-09-09 20:47:06,975 utils 392 27624 Total fetched articles: 5
+INFO 2024-09-09 20:47:06,975 utils 392 27624 Processed article: {'title': 'Amazon Prime Day drives the most loyalty among summer sales events', 'url': 'https://www.retaildive.com/news/amazon-prime-day-shopper-loyalty-summer-sales-events/723821/', 'source': 'Retail Dive', 'published_at': '2024-08-12T12:19:00Z'}
+INFO 2024-09-09 20:47:06,976 utils 392 27624 Processed article: {'title': 'Lowe’s rebrands media network as it expands channel offerings', 'url': 'https://www.retaildive.com/news/lowes-rebrands-media-network-expands-advertising-channels/724063/', 'source': 'Retail Dive', 'published_at': '2024-08-13T15:29:00Z'}
+INFO 2024-09-09 20:47:06,976 utils 392 27624 Processed article: {'title': 'LL Flooring files for bankruptcy with plans to close 94 stores', 'url': 'https://www.retaildive.com/news/ll-flooring-chapter-11-bankruptcy-store-closures/723956/', 'source': 'Retail Dive', 'published_at': '2024-08-12T17:34:00Z'}
+INFO 2024-09-09 20:47:06,976 utils 392 27624 Processed article: {'title': 'The Weekly Closeout: Amazon’s October sales event returns and Hollister goes back to school', 'url': 'https://www.retaildive.com/news/the-weekly-closeout-amazon-october-sales-hollister-Krispy-Kreme-Nuuly/725063/', 'source': 'Retail Dive', 'published_at': '2024-08-23T16:30:00Z'}
+INFO 2024-09-09 20:47:06,977 utils 392 27624 Processed article: {'title': 'Ace Hardware sales up 3% as it leans into stores', 'url': 'https://www.retaildive.com/news/ace-hardware-earnings-sales-increase-store-openings-elevate-ace/725100/', 'source': 'Retail Dive', 'published_at': '2024-08-23T16:46:00Z'}
+INFO 2024-09-09 20:47:06,977 views 392 27624 Fetched 5 articles for the home page
+INFO 2024-09-09 20:47:06,981 basehttp 392 27624 "GET / HTTP/1.1" 200 13079
+INFO 2024-09-09 20:47:25,327 basehttp 392 27508 "GET /dashboard/ HTTP/1.1" 200 22401
+INFO 2024-09-09 20:47:25,596 basehttp 392 27508 "GET /dashboard/api/dashboard-data/?date_range=1&sort_relationship=total HTTP/1.1" 200 1308
+INFO 2024-09-09 20:47:30,164 basehttp 392 27508 "GET /vendors/ HTTP/1.1" 200 24590
+INFO 2024-09-12 14:07:26,928 autoreload 3392 12240 Watching for file changes with StatReloader
+INFO 2024-09-12 14:08:56,311 utils 3392 4968 Fetching retail news from API
+INFO 2024-09-12 14:08:56,312 utils 3392 4968 Date range: from 2024-08-13 to 2024-09-12
+INFO 2024-09-12 14:08:56,578 utils 3392 4968 Successfully fetched 5 articles from Retail Dive
+INFO 2024-09-12 14:08:56,578 utils 3392 4968 Total fetched articles: 5
+INFO 2024-09-12 14:08:56,579 utils 3392 4968 Processed article: {'title': 'Lowe’s rebrands media network as it expands channel offerings', 'url': 'https://www.retaildive.com/news/lowes-rebrands-media-network-expands-advertising-channels/724063/', 'source': 'Retail Dive', 'published_at': '2024-08-13T15:29:00Z'}
+INFO 2024-09-12 14:08:56,580 utils 3392 4968 Processed article: {'title': 'The Weekly Closeout: Amazon’s October sales event returns and Hollister goes back to school', 'url': 'https://www.retaildive.com/news/the-weekly-closeout-amazon-october-sales-hollister-Krispy-Kreme-Nuuly/725063/', 'source': 'Retail Dive', 'published_at': '2024-08-23T16:30:00Z'}
+INFO 2024-09-12 14:08:56,580 utils 3392 4968 Processed article: {'title': 'Ace Hardware sales up 3% as it leans into stores', 'url': 'https://www.retaildive.com/news/ace-hardware-earnings-sales-increase-store-openings-elevate-ace/725100/', 'source': 'Retail Dive', 'published_at': '2024-08-23T16:46:00Z'}
+INFO 2024-09-12 14:08:56,581 utils 3392 4968 Processed article: {'title': 'Reebok releases new fitness app', 'url': 'https://www.retaildive.com/news/reebok-releases-new-fitness-app/724325/', 'source': 'Retail Dive', 'published_at': '2024-08-15T16:33:00Z'}
+INFO 2024-09-12 14:08:56,581 utils 3392 4968 Processed article: {'title': 'Spanx founder launches shoe brand Sneex', 'url': 'https://www.retaildive.com/news/spanx-founder-sara-blakely-launches-shoe-brand-sneex/724703/', 'source': 'Retail Dive', 'published_at': '2024-08-20T15:25:00Z'}
+INFO 2024-09-12 14:08:56,582 views 3392 4968 Fetched 5 articles for the home page
+INFO 2024-09-12 14:08:56,649 basehttp 3392 4968 "GET / HTTP/1.1" 200 13004
+INFO 2024-09-12 14:08:58,697 basehttp 3392 4968 "GET /static/favicon.ico HTTP/1.1" 200 0
+INFO 2024-09-12 14:11:37,229 basehttp 3392 17320 "GET /dashboard/ HTTP/1.1" 200 22401
+INFO 2024-09-12 14:11:38,067 basehttp 3392 17320 "GET /dashboard/api/dashboard-data/?date_range=1&sort_relationship=total HTTP/1.1" 200 1308
+INFO 2024-09-12 14:13:15,319 basehttp 3392 17320 "GET /vendors/ HTTP/1.1" 200 24590
+INFO 2024-09-12 14:13:17,054 basehttp 3392 17320 "GET /vendors/227/ HTTP/1.1" 200 19115
+INFO 2024-09-12 14:13:29,912 basehttp 3392 17320 "GET /vendors/ HTTP/1.1" 200 24590
+INFO 2024-09-12 14:13:35,286 basehttp 3392 17320 "GET /vendors/?search=direct&relationship_type=&risk_level=&sort_by=vendor_name&sort_order=asc HTTP/1.1" 200 18047
+INFO 2024-09-12 14:13:37,277 basehttp 3392 17320 "GET /vendors/355/ HTTP/1.1" 200 29346
+INFO 2024-09-12 14:14:47,382 basehttp 3392 17320 "GET /dashboard/ HTTP/1.1" 200 22401
+INFO 2024-09-12 14:14:47,612 basehttp 3392 17320 "GET /dashboard/api/dashboard-data/?date_range=1&sort_relationship=total HTTP/1.1" 200 1308
+INFO 2024-09-12 14:19:16,042 basehttp 3392 17320 "GET /import/ HTTP/1.1" 200 9154
+INFO 2024-09-12 14:19:46,306 utils 3392 17320 Returning cached retail news articles
+INFO 2024-09-12 14:19:46,307 views 3392 17320 Fetched 5 articles for the home page
+INFO 2024-09-12 14:19:46,312 basehttp 3392 17320 "GET / HTTP/1.1" 200 13004
+INFO 2024-09-12 14:55:15,367 basehttp 3392 27496 "GET /vendors/ HTTP/1.1" 200 24590
+INFO 2024-09-12 14:55:17,828 basehttp 3392 27496 "GET /vendors/227/ HTTP/1.1" 200 19115
+INFO 2024-09-12 14:55:32,744 basehttp 3392 27496 "GET /dashboard/ HTTP/1.1" 200 22401
+INFO 2024-09-12 14:55:32,892 basehttp 3392 27496 "GET /dashboard/api/dashboard-data/?date_range=1&sort_relationship=total HTTP/1.1" 200 1308
+INFO 2024-09-12 14:55:34,806 basehttp 3392 27496 "GET /vendors/ HTTP/1.1" 200 24590
+INFO 2024-09-17 09:03:11,677 autoreload 26108 24920 Watching for file changes with StatReloader
+INFO 2024-09-17 09:03:16,762 utils 26108 11500 Fetching retail news from API
+INFO 2024-09-17 09:03:16,763 utils 26108 11500 Date range: from 2024-08-18 to 2024-09-17
+INFO 2024-09-17 09:03:17,026 utils 26108 11500 Successfully fetched 5 articles from Retail Dive
+INFO 2024-09-17 09:03:17,026 utils 26108 11500 Total fetched articles: 5
+INFO 2024-09-17 09:03:17,026 utils 26108 11500 Processed article: {'title': 'Miniso unveils 200th US location in Santa Monica', 'url': 'https://www.retaildive.com/news/miniso-opens-two-hundredth-united-states-store-expansion-santa-monica/725824/', 'source': 'Retail Dive', 'published_at': '2024-09-03T15:06:00Z'}
+INFO 2024-09-17 09:03:17,027 utils 26108 11500 Processed article: {'title': 'Rihanna’s Savage X Fenty debuts at Selfridges', 'url': 'https://www.retaildive.com/news/rihanna-savage-x-fenty-selfridges-oxford-street/725858/', 'source': 'Retail Dive', 'published_at': '2024-09-03T15:20:00Z'}
+INFO 2024-09-17 09:03:17,027 utils 26108 11500 Processed article: {'title': 'Virtual try-on offers more sales: Perfect Corp.', 'url': 'https://www.retaildive.com/news/virtual-try-on-offers-more-sales-perfect-corp/723798/', 'source': 'Retail Dive', 'published_at': '2024-09-03T18:12:00Z'}
+INFO 2024-09-17 09:03:17,028 utils 26108 11500 Processed article: {'title': 'Best Buy revenue falls 3% in Q2', 'url': 'https://www.retaildive.com/news/best-buy-revenue-falls-q2/725642/', 'source': 'Retail Dive', 'published_at': '2024-08-30T14:30:00Z'}
+INFO 2024-09-17 09:03:17,028 utils 26108 11500 Processed article: {'title': 'What lies ahead for Bonobos under new ownership', 'url': 'https://www.retaildive.com/news/bonobos-dtc-future-new-owners-phoenix-simon-brookfield-whp-global/725195/', 'source': 'Retail Dive', 'published_at': '2024-08-28T15:09:00Z'}
+INFO 2024-09-17 09:03:17,029 views 26108 11500 Fetched 5 articles for the home page
+INFO 2024-09-17 09:03:17,076 basehttp 26108 11500 "GET / HTTP/1.1" 200 12929
+INFO 2024-09-17 09:03:18,539 basehttp 26108 11500 "GET /static/favicon.ico HTTP/1.1" 200 0

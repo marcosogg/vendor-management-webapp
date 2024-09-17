@@ -3,10 +3,9 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from django.http import JsonResponse
 from django.db.models import Sum, Count, Avg, F
 from core.models import Vendor, Part, Spend, Risk, Activity
-from core.utils import log_error
+from core.utils import log_error, format_currency
 from django.utils import timezone
 from dateutil.relativedelta import relativedelta
-from core.views import format_currency
 from django.db.models.functions import TruncYear
 import logging
 
@@ -24,12 +23,10 @@ class DashboardView(LoginRequiredMixin, TemplateView):
         total_spend = Spend.objects.aggregate(total=Sum("usd_amount"))["total"] or 0
         context["total_spend"] = format_currency(total_spend)
         avg_risk_score = (
-            Risk.objects.aggregate(Avg("total_score"))["total_score__avg"] or 0
+            Risk.objects.aggregate(avg_score=Avg("total_score"))["avg_score"] or 0
         )
         context["avg_risk_score"] = round(avg_risk_score, 2)
-        context["high_risk_vendors"] = Vendor.objects.filter(
-            risk__risk_level="HIGH"
-        ).count()
+        context["high_risk_vendors"] = Risk.objects.filter(risk_level="HIGH").count()
         context["top_vendors"] = Vendor.objects.annotate(
             total_spend=Sum("spends__usd_amount")
         ).order_by("-total_spend")[:5]
@@ -99,7 +96,7 @@ def dashboard_data(request):
         )
 
         avg_risk_score = (
-            Risk.objects.aggregate(Avg("total_score"))["total_score__avg"] or 0
+            Risk.objects.aggregate(avg_score=Avg("total_score"))["avg_score"] or 0
         )
 
         data = {
@@ -112,7 +109,7 @@ def dashboard_data(request):
             "geographical_distribution": {
                 item["country"]: item["count"] for item in geographical_distribution
             },
-            "high_risk_vendors": Vendor.objects.filter(risk__risk_level="HIGH").count(),
+            "high_risk_vendors": Risk.objects.filter(risk_level="HIGH").count(),
             "total_vendors": Vendor.objects.count(),
             "total_parts": Part.objects.count(),
             "avg_risk_score": round(avg_risk_score, 2),
